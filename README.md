@@ -3,7 +3,7 @@ Pipeline for Ocean Features Detection with Sentinel-2.
 
 ## Objective 
 
-The objective of this work is to foster the development of a tool for monitoring ocean features namely, floating plastic accumulations, using satellite imagery. By providing the source code, the vision is to provide a transparent easy-to-examine code that can be decomposed in several modules, and in this way stimulate improvements and new implementations from the scientific community to reach the ultimate goal of tracking floating plastic in an operational manner from satellite data. 
+The objective of this work is to foster the development of a tool for monitoring ocean features, particularly floating plastic accumulations, using Sentinel-2 satellite imagery. By providing the source code, the vision is to provide a transparent easy-to-examine code that can be decomposed in several modules, and in this way stimulate improvements and new implementations from the scientific community to reach the ultimate goal of tracking floating plastic in an operational manner from satellite data. 
 
 ## Workflow
 In this repository we propose an open-policy data pipeline framework for ocean features detection (e.g. floating plastic patches, foam, floating macroalgae, turbid water and clear water) using Sentinel-2 satellite imagery and machine learning methods. The presented workflow consists of three main steps:
