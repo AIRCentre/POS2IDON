@@ -13,7 +13,7 @@ In this repository we propose an open-policy data pipeline framework for ocean f
 2) image pre-processing : application of [ACOLITE](https://github.com/acolite/acolite.git/) atmospheric correction module to obtain Rayleigh-corrected reflectances and surface reflectances,
 application of a cloud mask computed with [Sentinel Hub's cloud detector for Sentinel-2 imagery](https://github.com/sentinel-hub/sentinel2-cloud-detector), application of a land mask based on [ESA World Cover 2021](https://worldcover2021.esa.int/), application of “marine clear water” mask (NDWI-based, or a NIR-reflectance based thresholding).
 
-3) pixel-based classification with machine learning methods on the downloaded set of Sentinel-2 images. The workflow supports two well-known machine learning decision-tree algorithms (Random Forest and XGBoost) trained with spectral signatures, as well as spectral indices (e.g., NDVI - Normalized Difference Vegetation Index, FAI - Floating Algae Index, FDI - Floating Debris Index). As an additional option, the classification step can be computed with Julia programming language using Random Forest trained models. Outputs include the classification maps and classification probability maps, for the chosen region and time period.
+3) pixel-based classification with machine learning methods on the downloaded set of Sentinel-2 images. The workflow supports two well-known machine learning decision-tree algorithms (Random Forest and XGBoost) trained with spectral signatures, as well as spectral indices (e.g., NDVI - Normalized Difference Vegetation Index, FAI - Floating Algae Index, FDI - Floating Debris Index). As additional option, the classification step, using Random Forest trained models, can be computed also with Julia programming language. Outputs include the classification maps and classification probability maps, for the chosen region and time period.
 
 ## Dependencies
 ### Python
@@ -67,4 +67,4 @@ Open User Input file in `Configs/User_Inputs.py` and follow the descriptions to 
 
 ### Example
 
-To test the classification workflow we provide a random forest model based on [MARIDA](https://github.com/marine-debris/marine-debris.github.io) spectral signatures library and trained on spectral signatures, produced spectral indices as in [Kikaki et al., 2022](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0262247).
+To test the classification workflow we provide a random forest model based on [MARIDA](https://github.com/marine-debris/marine-debris.github.io) spectral signatures library and trained as described in [Kikaki et al., 2022](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0262247).
