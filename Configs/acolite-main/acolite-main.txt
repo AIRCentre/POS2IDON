@@ -1,0 +1,1 @@
+Download and unzip ACOLITE from https://github.com/acolite/acolite
