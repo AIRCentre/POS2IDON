@@ -69,5 +69,5 @@ Open User Input file in `Configs/User_Inputs.py` and follow the descriptions to 
 
 To test the classification workflow we provide a random forest model based on [MARIDA](https://github.com/marine-debris/marine-debris.github.io) spectral signatures library and trained as described in [Kikaki et al., 2022](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0262247). You can download the model folder using this [link](https://drive.google.com/drive/folders/1KtzX9tgvEOwhoRGW-fjy0qHpfdga_0sx) and place it in `Configs/MLmodels.`. By default the `User_Inputs.py` is configured to perform a classification on a [plastic debris event](https://sentinels.copernicus.eu/web/success-stories/-/copernicus-sentinel-2-show-dense-plastic-patches) case study that occurred in the Gulf of Honduras on 18th September 2020. 
 
-![](Example.png)
+![](Example-img.png)
 Visualization made using [QGIS](https://qgis.org/en/site/).
