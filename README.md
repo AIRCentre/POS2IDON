@@ -8,9 +8,9 @@ The objective of this work is to foster the development of a tool for monitoring
 ## Workflow
 In this repository we propose an open-policy data pipeline framework for ocean features detection (e.g. floating plastic patches, foam, floating macroalgae, turbid water and clear water) using Sentinel-2 satellite imagery and machine learning methods. The presented workflow consists of three main steps:
 
-1) search and Download Level-1C Sentinel-2 imagery from [Copernicus Open Access Hub](https://scihub.copernicus.eu/) or [Google Cloud Storage](https://cloud.google.com/storage/docs/public-datasets/sentinel-2) for a given region of interest and specified time period.
+1) search and download Level-1C Sentinel-2 imagery from [Copernicus Open Access Hub](https://scihub.copernicus.eu/) or [Google Cloud Storage](https://cloud.google.com/storage/docs/public-datasets/sentinel-2) for a given region of interest and specified time period.
 
-2) image pre-processing : application of [ACOLITE](https://github.com/acolite/acolite.git/) atmospheric correction module to obtain Rayleigh-corrected reflectances and surface reflectances,
+2) image pre-processing: application of [ACOLITE](https://github.com/acolite/acolite.git/) atmospheric correction module to obtain Rayleigh-corrected reflectances and surface reflectances,
 application of a cloud mask computed with [Sentinel Hub's cloud detector for Sentinel-2 imagery](https://github.com/sentinel-hub/sentinel2-cloud-detector), application of a land mask based on [ESA World Cover 2021](https://worldcover2021.esa.int/), application of “marine clear water” mask (NDWI-based, or a NIR-reflectance based thresholding).
 
 3) pixel-based classification with machine learning methods on the downloaded set of Sentinel-2 images. The workflow supports two well-known machine learning decision-tree algorithms (Random Forest and XGBoost) trained with spectral signatures, as well as spectral indices (e.g., NDVI - Normalized Difference Vegetation Index, FAI - Floating Algae Index, FDI - Floating Debris Index). As additional option, the classification step using Random Forest trained models, can be computed also with Julia programming language. Outputs include the classification maps and classification probability maps, for the chosen region and time period.
@@ -19,18 +19,18 @@ application of a cloud mask computed with [Sentinel Hub's cloud detector for Sen
 ### Python
 POS2IDON is coded in Python 3. Create and activate a Python environment using conda:
 ```
-conda create -n Pipeline-Env python=3.9
-conda activate Pipeline-Env
+conda create -n pos2idon-env python=3.9
+conda activate pos2idon-env
 ```
-and install following libraries in this order:
+and install libraries in the following order (tested on Windows 11 and macOS Ventura):
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
 ```
 ```
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 y pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 s2cloudless==1.6.0 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia xgboost 
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 y pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 s2cloudless==1.6.0 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 
 ```
 
-### Julia
+### Julia (testing phase)
 To run the classification step using [Julia programming language](https://julialang.org/downloads/) is necessary to install locally a version julia (1.8.3 tested) with the following packages:
 [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl), [DecisionTree.jl](https://github.com/JuliaAI/DecisionTree.jl) ,[JLD2.jl](https://github.com/JuliaIO/JLD2.jl),[Pandas.jl](https://github.com/JuliaPy/Pandas.jl) [PyCall](https://github.com/JuliaPy/PyCall.jl).
 
@@ -69,4 +69,5 @@ Open User Input file in `Configs/User_Inputs.py` and follow the descriptions to 
 
 To test the classification workflow we provide a random forest model based on [MARIDA](https://github.com/marine-debris/marine-debris.github.io) spectral signatures library and trained as described in [Kikaki et al., 2022](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0262247). You can download the model folder using this [link](https://drive.google.com/drive/folders/1KtzX9tgvEOwhoRGW-fjy0qHpfdga_0sx) and place it in `Configs/MLmodels.`. By default the `User_Inputs.py` is configured to perform a classification on a [plastic debris event](https://sentinels.copernicus.eu/web/success-stories/-/copernicus-sentinel-2-show-dense-plastic-patches) case study that occurred in the Gulf of Honduras on 18th September 2020. 
 
-![](Example.png)
+![](Example-img.png)
+Visualization made using [QGIS](https://qgis.org/en/site/).

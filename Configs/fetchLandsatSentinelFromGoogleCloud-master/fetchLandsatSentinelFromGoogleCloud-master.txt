@@ -1,1 +1,0 @@
-Download and unzip FeLS from https://github.com/vascobnunes/fetchLandsatSentinelFromGoogleCloud
