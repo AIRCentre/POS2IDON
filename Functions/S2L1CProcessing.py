@@ -77,7 +77,10 @@ def DownloadTile_from_URL_GC(url,S2L1CproductsFolder):
     Output: S2L1C products.
             LogList - Function's log outputs. List of strings.
     """
-    
+    # Import FeLS (GitHub clone)
+    Basepath = os.getcwd()
+    sys.path.append(os.path.join(Basepath,'Configs/fetchLandsatSentinelFromGoogleCloud-master'))
+    import fels
     # Import function from fels
     Basepath = os.getcwd()
     sys.path.append(os.path.join(Basepath,'Configs/fetchLandsatSentinelFromGoogleCloud-master/fels'))
