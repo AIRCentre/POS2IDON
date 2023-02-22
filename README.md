@@ -24,10 +24,10 @@ conda activate pos2idon-env
 ```
 and install libraries in the following order (tested on Windows 11 and macOS Ventura):
 ```
-conda install -c conda-forge gdal=3.5.0 lightgbm=3.3.2
+conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
 ```
 ```
-pip install python-dotenv==0.20.0 geopandas==0.11.1 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 y pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 s2cloudless==1.6.0 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 
+pip install python-dotenv==0.20.0  sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 y pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 s2cloudless==1.6.0 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 
 ```
 
 ### Julia (testing phase)
