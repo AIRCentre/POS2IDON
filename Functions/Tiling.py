@@ -14,22 +14,22 @@ import itertools
 from osgeo import gdal
 import numpy as np
 import rasterio as rio
-from Auxiliar import CreateBrandNewFolder
 
 #######################################################################################################################################
-def create_stacked_masked_bands(folder_path):
+def create_features_stack(input_folder, output_folder):
     """
-    This function creates stacked images of masked bands.
-    Input: folder_path - Path to the folder containing the masked outputs. String.
-    Output: Stacks tif bands into a single tif with same name as folder_path.
+    This function creates a stack of features and saves into a single TIF.
+    Input: input_folder - Path to the folder where the isolated features are saved. String.
+           output_folder - Path to the folder where the single stack will be saved. String.
+    Output: Single stack of features as TIF file.
     """
-    # Stacks tif masekd bands into a single tif
-    SortingPattern = ["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B11","B12"] # Prevents confusion between B08 and B8A during sort.
-    ListOfBandPaths = [os.path.join(folder_path, Band+".tif") for Band in SortingPattern]
+    sorting_pattern = ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 
+                       'B12') + ('NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI')
+    paths_list = [os.path.join(input_folder, feature+".tif") for feature in sorting_pattern]
 
-    VirtualStack = gdal.BuildVRT('', ListOfBandPaths, separate=True)
-    gdal.Translate(os.path.join(folder_path, os.path.basename(folder_path) +'_StackedBands.tif'), VirtualStack, format='GTiff')
-    VirtualStack = None
+    virtual_stack = gdal.BuildVRT('', paths_list, separate=True)
+    gdal.Translate(os.path.join(output_folder, os.path.basename(output_folder) +'_stack.tif'), virtual_stack, format='GTiff')
+    virtual_stack = None
 
 #######################################################################################################################################
 def start_points(size, split_size, overlap=0):
@@ -65,7 +65,7 @@ def split_image_with_overlap(folder_path, patch_size, overlap=0):
         os.mkdir(patches_path)
 
     # Open stacked raster
-    image_path = os.path.join(folder_path, os.path.basename(folder_path) + "_StackedBands.tif")
+    image_path = os.path.join(folder_path, os.path.basename(folder_path) + "_stack.tif")
     image_open = gdal.Open(image_path,1)
     image = image_open.ReadAsArray()
     img_shape = image.shape
@@ -211,18 +211,17 @@ def mosaic_patches(input_folder, output_folder):
     Input: input_folder - Folder where the overlapping patches are saved.
                           The patches must follow the name convention 256x256_patch_0-0.tif,
                           widthxheight_patch_row-column.tif.
-           output_folder - Folder where the final folder with mosaics will be saved.
+           output_folder - Folder where the final mosaics will be saved.
     Output: Mosaic image saved inside output_folder.
     """
-    # Create empty folder to save mosaics
-    mosaics_folder = os.path.join(output_folder, "mosaics")
-    CreateBrandNewFolder(mosaics_folder)
-
     # List of patches to read
     patches_path_list = glob.glob(os.path.join(input_folder, "*.tif"))
 
     # Reference patch size name
     patch_size_str = os.path.basename(patches_path_list[0]).split('_')[0]
+
+    # Reference patch indicator name
+    patch_indicator_str = os.path.basename(patches_path_list[0]).split('_')[3]
 
     # Split each element of the list
     patches_split = [(int(os.path.basename(p).split('_')[2].split('-')[0]), 
@@ -237,7 +236,7 @@ def mosaic_patches(input_folder, output_folder):
         groups.append(list(g))
 
     # Convert each element of the grouped list back to the original patch format
-    patches_grouped = [[os.path.join(input_folder, patch_size_str+"_patch_"+str(k[0])+'-'+str(k[1])+"_unet.tif") for k in group] for group in groups]
+    patches_grouped = [[os.path.join(input_folder, patch_size_str+"_patch_"+str(k[0])+'-'+str(k[1])+"_"+patch_indicator_str) for k in group] for group in groups]
     
     # Cycle through patch groups, create mosaic of patches for each row
     j = 0
@@ -247,20 +246,35 @@ def mosaic_patches(input_folder, output_folder):
         left_patch = patch_row[i]
         while i < group_len-1:
             right_patch = patch_row[i+1] 
-            mosaic_two_patches(left_patch, right_patch, mosaics_folder, j, axis=0)
-            left_patch = os.path.join(mosaics_folder, "mosaic_row-" + str(j) + ".tif")
+            mosaic_two_patches(left_patch, right_patch, output_folder, j, axis=0)
+            left_patch = os.path.join(output_folder, "mosaic_row-" + str(j) + ".tif")
             i += 1
         j += 1
 
     # Create mosaic of each row mosaic
-    row_mosaics_len = len(glob.glob(os.path.join(mosaics_folder, "*.tif")))
+    row_mosaics_len = len(glob.glob(os.path.join(output_folder, "*.tif")))
     i = 0
-    top_patch = os.path.join(mosaics_folder, "mosaic_row-0.tif")
+    top_patch = os.path.join(output_folder, "mosaic_row-0.tif")
     while i < row_mosaics_len-1:
-        bottom_patch = os.path.join(mosaics_folder, "mosaic_row-" + str(i+1) + ".tif")
-        mosaic_two_patches(top_patch, bottom_patch, mosaics_folder, 0, axis=1)
-        top_patch = os.path.join(mosaics_folder, "mosaic_column-0.tif")
+        bottom_patch = os.path.join(output_folder, "mosaic_row-" + str(i+1) + ".tif")
+        mosaic_two_patches(top_patch, bottom_patch, output_folder, 0, axis=1)
+        top_patch = os.path.join(output_folder, "mosaic_column-0.tif")
         i += 1
+
+#######################################################################################################################################
+# def create_stacked_masked_bands(folder_path):
+#     """
+#     This function creates stacked images of masked bands.
+#     Input: folder_path - Path to the folder containing the masked outputs. String.
+#     Output: Stacks tif bands into a single tif with same name as folder_path.
+#     """
+#     # Stacks tif masekd bands into a single tif
+#     SortingPattern = ["B01","B02","B03","B04","B05","B06","B07","B08","B8A","B11","B12"] # Prevents confusion between B08 and B8A during sort.
+#     ListOfBandPaths = [os.path.join(folder_path, Band+".tif") for Band in SortingPattern]
+
+#     VirtualStack = gdal.BuildVRT('', ListOfBandPaths, separate=True)
+#     gdal.Translate(os.path.join(folder_path, os.path.basename(folder_path) +'_StackedBands.tif'), VirtualStack, format='GTiff')
+#     VirtualStack = None
 
 #######################################################################################################################################
 # from patchify import patchify
