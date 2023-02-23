@@ -48,7 +48,7 @@ def CloneModulesFromGitHub(SaveFolder):
     
     if not os.path.exists(FeLSfolder):
        print("\nCloning FeLS from GitHub...") 
-       FeLSclone = "git clone https://github.com/vascobnunes/fetchLandsatSentinelFromGoogleCloud.git " + FeLSfolder
+       FeLSclone = "git clone https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud.git " + FeLSfolder
        os.system(FeLSclone)
        print("Done.\n")
 
