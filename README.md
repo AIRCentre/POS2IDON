@@ -48,8 +48,7 @@ This has been tested successfully on Windows (11) machine in VSCode. The Julia f
 
     -   [Copernicus Open Access Hub](https://scihub.copernicus.eu/dhus/#/home/)
     -   [Terrascope](https://sso.terrascope.be/auth/realms/terrascope/protocol/openid-connect/auth?client_id=terrascope-viewer&redirect_uri=https%3A%2F%2Fviewer.esa-worldcover.org%2Fworldcover%2F%3Flanguage%3Den%26bbox%3D-262.61718749999994%2C-79.6556678546481%2C262.61718749999994%2C79.65566785464813%26overlay%3Dfalse%26bgLayer%3DOSM%26date%3D2023-01-19%26layer%3DWORLDCOVER_2021_MAP&state=76f1db73-28b4-4e8b-8b41-21a995a5ee92&response_mode=fragment&response_type=code&scope=openid&nonce=1fa78ab3-bf00-4834-8213-f331e0046921)
-    -   [NASA EarthData ](https://urs.earthdata.nasa.gov/home)* 
-    * Login to your EarthData account and in Authorised Apps select Approve More Applications and add B.DAAC Data Access and LP DAAC Data Pool.
+    -   [NASA EarthData ](https://urs.earthdata.nasa.gov/home) (Login to your EarthData account and in Authorised Apps select Approve More Applications and add B.DAAC Data Access and LP DAAC Data Pool)
 
     and type them in the file `Configs/Environments/.env`
 
