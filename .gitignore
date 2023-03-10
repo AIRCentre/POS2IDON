@@ -9,13 +9,12 @@ Configs/*.csv
 Configs/*.sqlite
 
 # Ignore folders and files created during process.
-S2L1C_Products/*
-ACOLITE_Outputs/*
-ESAwc_Tiles/*
-Masking_Outputs/*
-Masked_Outputs/*
-Results_SCmaps/*
-LogFile/*
+0_S2L1C_Products/*
+1_Atmospheric_Corrected_Products/*
+2_Masked_Products/*
+2-1_ESA_Worldcover/*
+3_Classification_Results/*
+4_LogFile/*
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,dotenv
