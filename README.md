@@ -62,7 +62,7 @@ This has been tested successfully on Windows (11) machine in VSCode. The Julia f
     `configs/MLmodels/YourModelFolder/YourModel.zip` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for Py-Torch)\
     `configs/MLmodels/YourModelFolder/YourModel.jld2`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for Julia Language models)
     
-- Execute the script `Classification_Workflow.py`, this will automatically clone (macOS with Developer Tools) the following repositories:
+- Execute the script `workflow.py`, this will automatically clone (macOS with Developer Tools) the following repositories:
 
     - [FeLS - Fetch Landsat & Sentinel Data from Google Cloud (private)](https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud.git) repository in the folder :\
     `/configs/fetchLandsatSentinelFromGoogleCloud-master`
@@ -76,7 +76,7 @@ The first time you run FeLS it will download a csv table, this process may take 
 
 ## Settings and Usage
 
-Open `configs/User_Inputs.py` and follow the descriptions to set up wanted workflow options, insert region of interest and sensing period, select download service, define masking and classification options. Execute the script `Classification_Workflow.py` to run the workflow.
+Open `configs/User_Inputs.py` and follow the descriptions to set up wanted workflow options, insert region of interest and sensing period, select download service, define masking and classification options. Execute the script `workflow.py` to run the workflow.
 
 
 
