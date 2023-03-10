@@ -1,12 +1,12 @@
 # Ignore some files inside Configs, because are too heavy or confidential.
-Configs/acolite-main/*
-Configs/fetchLandsatSentinelFromGoogleCloud-master/*
-Configs/MLmodels/*
-!Configs/MLmodels/RF_Model_Example_MARIDA/RF_Model_Example_MARIDA.txt
-Configs/Environments/.env
-Configs/.stamps
-Configs/*.csv
-Configs/*.sqlite
+configs/acolite-main/*
+configs/fetchLandsatSentinelFromGoogleCloud-master/*
+configs/MLmodels/*
+!configs/MLmodels/RF_Model_Example_MARIDA/RF_Model_Example_MARIDA.txt
+configs/Environments/.env
+configs/.stamps
+configs/*.csv
+configs/*.sqlite
 
 # Ignore folders and files created during process.
 0_S2L1C_Products/*
