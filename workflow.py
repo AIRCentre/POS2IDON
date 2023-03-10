@@ -210,9 +210,12 @@ if pre_start_flag == 1:
                             # Apply ACOLITE algorithm
                             try:
                                 ACacolite(product_in_urls_list[0], ac_products_folder, os.getenv(evariables[4]), os.getenv(evariables[5]), roi)
+                                corrupted_flag = 0
                             except Exception as e:
+                                corrupted_flag = 1
                                 ScriptOutput2List("Product might be corrupted or ACOLITE is not well configured:", log_list)
                                 ScriptOutput2List(str(e), log_list)
+                                ScriptOutput2List("If this is the first time running the workflow, try to clone ACOLITE manually.", log_list)
                                 # If product corrupted, ACOLITE might stop and text files will remain in main folder
                                 for trash_txt in glob.glob(os.path.join(ac_products_folder, "*.txt")): 
                                     os.remove(trash_txt)
@@ -230,6 +233,8 @@ if pre_start_flag == 1:
                                     ScriptOutput2List("Product corrupted. Not all features are available:", log_list)
                                     ScriptOutput2List(str(e), log_list)
                                     excluded_products_corrupted.append(safe_file_name)
+                            elif corrupted_flag == 1:
+                                excluded_products_corrupted.append(safe_file_name)
                             else:
                                 excluded_products_no_data_sensing_time.append(safe_file_name)
                             ScriptOutput2List("Done.\n", log_list)
