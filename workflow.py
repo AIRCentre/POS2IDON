@@ -14,6 +14,9 @@ print("| WELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentine
 print("|----------------------------------------------------------------------------|")
 print("\n")
 
+# Init script outputs list to save as log file
+log_list = ["\n WELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 \n"]
+
 # Pré-start functions
 try:
     print("Importing Pré-start functions...")
@@ -82,11 +85,15 @@ try:
     # Path of .env file
     basepath = os.getcwd()
     env_path = os.path.join(basepath,"configs/Environments/.env")
-    # Environment variables
-    evariables = ("COAHuser", "COAHpassword", "TSuser", "TSpassword", "EDuser", "EDpassword")
-    load_dotenv(env_path)
+    if os.path.exists(env_path):
+        # Environment variables
+        evariables = ("COAHuser", "COAHpassword", "TSuser", "TSpassword", "EDuser", "EDpassword")
+        load_dotenv(env_path)
+        credentials_flag = 1
+    else:
+        print("Check credentials .env file.")
+        credentials_flag = 0
     print("Done.\n")
-    credentials_flag = 1
 except Exception as e:
     print(str(e) + "\n")
     credentials_flag = 0
@@ -98,8 +105,6 @@ if pre_start_flag == 1:
 
     # Start main processing time
     mp_time0 = time.time()
-    # Init script outputs list to save as log file
-    log_list = []
 
     # SEARCH PRODUCTS ######################################################################
     ScriptOutput2List("SEARCH PRODUCTS", log_list)
@@ -215,7 +220,7 @@ if pre_start_flag == 1:
                                 corrupted_flag = 1
                                 ScriptOutput2List("Product might be corrupted or ACOLITE is not well configured:", log_list)
                                 ScriptOutput2List(str(e), log_list)
-                                ScriptOutput2List("If this is the first time running the workflow, try to clone ACOLITE manually.", log_list)
+                                ScriptOutput2List("If this is the first time running the workflow, try to clone ACOLITE manually or check credentials.", log_list)
                                 # If product corrupted, ACOLITE might stop and text files will remain in main folder
                                 for trash_txt in glob.glob(os.path.join(ac_products_folder, "*.txt")): 
                                     os.remove(trash_txt)
