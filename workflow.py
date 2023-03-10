@@ -15,7 +15,7 @@ print("|------------------------------------------------------------------------
 print("\n")
 
 # Init script outputs list to save as log file
-log_list = ["\n WELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 \n"]
+log_list = ["\nWELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 \n"]
 
 # Pré-start functions
 try:
