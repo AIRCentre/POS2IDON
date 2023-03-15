@@ -27,7 +27,7 @@ service = "GC"
 # Region Of Interest (ROI): 
 # SentinelHub EOBrowser (https://apps.sentinel-hub.com/eo-browser/) format. 
 # Also used by ACOLITE. If ROI has limits outside the product, ACOLITE will ignore.
-# Other inputs besides dictionary will stop the pré-start.
+# Other inputs besides dictionary with correct values will stop the pré-start.
 roi = {"type":"Polygon","coordinates":[[[-88.308792,15.660726],[-88.308792,15.928978],[-88.040314,15.928978],[-88.040314,15.660726],[-88.308792,15.660726]]]}
 
 # Near real time sensing period:
@@ -39,7 +39,7 @@ nrt_sensing_period = False
 # Sensing period of interest:
 # Used only if nrt_sensing_period = False.
 # (StartDate, EndDate).
-# Other inputs besides tuple will stop the pré-start.
+# Other inputs besides tuple with correct values will stop the pré-start.
 sensing_period = ('20200918', '20200918')
 
 # STREAM PROCESSING ########################################################################
@@ -61,7 +61,7 @@ stream_processing = True
 download = True
 
 # Download options.
-# Other inputs besides dictionary with right inputs will stop the pré-start.
+# Other inputs besides dictionary with correct values will stop the pré-start.
                     # Number of Long Term Archive attempts for COAH service.
                     # Minimum is 1 attempt. Script waits 60 seconds between each attempt.
 download_options = {"lta_attempts": 2}  
@@ -79,7 +79,7 @@ atmospheric_correction = True
 masking = True
 
 # Masking options.
-# Other inputs besides dictionary with right inputs will stop the pré-start.
+# Other inputs besides dictionary with correct values will stop the pré-start.
                    # Use existing ESA WorldCover Tiles that are inside 2-1_ESA_Worldcover to create water mask.
                    # If False, it will download the tiles.
                    # Ignore water mask by using option True without tiles in the 2-1_ESA_Worldcover folder.
@@ -109,7 +109,7 @@ masking_options = {"use_existing_ESAwc": False,
 classification = True
 
 # Classification options.
-# Other inputs besides dictionary with right inputs will stop the pré-start.                       
+# Other inputs besides dictionary with correct values will stop the pré-start.                       
                           # Split full image into 256x256 patches and consider each one during classification.
                           # Mosaic all patches into single image after classification.
 classification_options = {"split_and_mosaic": False,
@@ -143,7 +143,7 @@ classification_options = {"split_and_mosaic": False,
 
 
 # Delete processed folders and files:
-# Other inputs besides dictionary with right inputs will stop the pré-start.
+# Other inputs besides dictionary with correct values will stop the pré-start.
           # Delete original products:
           # Deletes original product after each processing.
 delete = {"original_products": False,

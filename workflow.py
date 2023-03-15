@@ -20,7 +20,7 @@ log_list = ["\nWELCOME TO POS2IDON - Pipeline for ocean feature detection with S
 # Pré-start functions
 try:
     print("Importing Pré-start functions...")
-    from modules.PreStart import CloneModulesFromGitHub, ScriptOutput2List, ScriptOutputs2LogFile
+    from modules.PreStart import CloneModulesFromGitHub, ScriptOutput2List, ScriptOutputs2LogFile, input_checker
     print("Done.\n")
     pre_start_functions_flag = 1
 except Exception as e:
@@ -70,11 +70,14 @@ except Exception as e:
 
 # Import user inputs
 try:
+    inputs_flag = 1
     print("Importing User Inputs...")
     from configs.User_Inputs import *
+    print("Done.")
+    # Input checker
+    print("Checking User Inputs...")
+    inputs_flag = input_checker()
     print("Done.\n")
-    # ADD INPUT CHECKER
-    inputs_flag = 1
 except Exception as e:
     print(str(e) + "\n")
     inputs_flag = 0
