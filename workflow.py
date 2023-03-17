@@ -90,7 +90,7 @@ try:
     env_path = os.path.join(basepath,"configs/Environments/.env")
     if os.path.exists(env_path):
         # Environment variables
-        evariables = ("COAHuser", "COAHpassword", "TSuser", "TSpassword", "EDuser", "EDpassword")
+        evariables = ("COAHuser", "COAHpassword", "TSuser", "TSpassword", "EDuser", "EDpassword", "CDSEuser", "CDSEpassword")
         load_dotenv(env_path)
         credentials_flag = 1
     else:
@@ -126,8 +126,13 @@ if pre_start_flag == 1:
                 log_list_append = CollectDownloadLinkofS2L1Cproducts_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), roi, sensing_period, s2l1c_products_folder)  
             elif service == "GC":
                 log_list_append = CollectDownloadLinkofS2L1Cproducts_GC(roi, sensing_period, "configs", s2l1c_products_folder) 
-            else:
-                ScriptOutput2List("Copernicus Ecosystem", log_list)   
+            else: # CDSE
+                collect_s2l1c_CDSE(roi, sensing_period, s2l1c_products_folder)
+                if service_options["generate_token"] == True:
+                    access_token, refresh_token = generate_tokens(os.getenv(evariables[6]), os.getenv(evariables[7]), refresh_token=os.getenv("CDSE_REFRESH_TOKEN"))
+                    save_tokens(access_token, refresh_token, env_path)
+                else:
+                    access_token = os.getenv("CDSE_ACCESS_TOKEN")  
         except Exception as e:
             ScriptOutput2List(str(e) + "\n", log_list)
     else:
@@ -176,7 +181,7 @@ if pre_start_flag == 1:
                         if os.path.exists(safe_file_path):
                             shutil.rmtree(safe_file_path)
                         if service == "COAH":
-                            log_list_append = DownloadTile_from_URL_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), url, s2l1c_products_folder, LTAattempt=download_options["lta_attempts"])
+                            log_list_append = DownloadTile_from_URL_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), url, s2l1c_products_folder, LTAattempt=service_options["lta_attempts"])
                             # Check if file is not retrievable from the COAH Long Term Archive
                             if not os.path.exists(safe_file_path):
                                 coah_lta_products.append(safe_file_name) 
@@ -187,8 +192,9 @@ if pre_start_flag == 1:
                             if not os.path.exists(safe_file_path):
                                 excluded_products_old_format.append(safe_file_name)
                                 ScriptOutput2List("The scene is in the redundant OPER old-format (before Nov 2016).Product excluded.\n", log_list)
-                        else:
-                            ScriptOutput2List("Copernicus Ecosystem", log_list)
+                        else: #CDSE
+                            # Download
+                            download_s2l1c_CDSE(access_token, url, s2l1c_products_folder) 
                     else:
                         ScriptOutput2List("Download of product ignored.\n", log_list)
                 except Exception as e:
@@ -435,45 +441,43 @@ if pre_start_flag == 1:
                 except Exception as e:
                     ScriptOutput2List("An error occurred while deleting folders and files:", log_list)
                     ScriptOutput2List(str(e) + "\n", log_list)
-           
+
+            # Statistics
+            number_found_products = len(urls_list)
+            number_excluded_products_old_format = len(excluded_products_old_format)
+            number_excluded_products_no_data_sensing_time = len(excluded_products_no_data_sensing_time)
+            number_coah_lta_products = len(coah_lta_products)
+            number_excluded_products_corrupted = len(excluded_products_corrupted)
+            number_processed_products = number_found_products - (number_excluded_products_old_format + \
+            number_excluded_products_no_data_sensing_time + number_coah_lta_products + number_excluded_products_corrupted)
+        
+            # Products found in ROI for selected Sensing Period
+            ScriptOutput2List("Number of products found for selected ROI and Sensing Period: " + str(number_found_products), log_list)
+            # Products processed in ROI for selected Sensing Period
+            ScriptOutput2List("Number of products processed for selected ROI and Sensing Period: " + str(number_processed_products), log_list)
+            # Products excluded (old format)
+            ScriptOutput2List("Number of products excluded (old format): " + str(number_excluded_products_old_format), log_list)
+            if number_excluded_products_old_format != 0:
+                excluded_products_old_format = "\n".join(excluded_products_old_format)
+                ScriptOutput2List(excluded_products_old_format, log_list)  
+            # Products excluded (ROI falls 100% on no data side of partial tile or scene have same sensing time)
+            ScriptOutput2List("Number of products excluded (100% no data or same sensing time): " + str(number_excluded_products_no_data_sensing_time), log_list)
+            if number_excluded_products_no_data_sensing_time != 0:
+                excluded_products_no_data_sensing_time = "\n".join(excluded_products_no_data_sensing_time)
+                ScriptOutput2List(excluded_products_no_data_sensing_time, log_list)
+            # Products COAH LTA (product not available for retrieval from LTA)
+            ScriptOutput2List("Number of products not available (COAH Long Term Archive): " + str(number_coah_lta_products), log_list)
+            if number_coah_lta_products != 0:
+                coah_lta_products = "\n".join(coah_lta_products)
+                ScriptOutput2List(coah_lta_products, log_list)
+            # Corrupted products (some bands or metadata not available during download)
+            ScriptOutput2List("Number of corrupted products: " + str(number_excluded_products_corrupted), log_list)
+            if number_excluded_products_corrupted != 0:
+                excluded_products_corrupted = "\n".join(excluded_products_corrupted)
+                ScriptOutput2List(excluded_products_corrupted, log_list)
+
     else:
         ScriptOutput2List("Stream Processing ignored.\n", log_list)
-
-
-    
-    # STATISTICS ###########################################################################
-    number_found_products = len(urls_list)
-    number_excluded_products_old_format = len(excluded_products_old_format)
-    number_excluded_products_no_data_sensing_time = len(excluded_products_no_data_sensing_time)
-    number_coah_lta_products = len(coah_lta_products)
-    number_excluded_products_corrupted = len(excluded_products_corrupted)
-    number_processed_products = number_found_products - (number_excluded_products_old_format + \
-        number_excluded_products_no_data_sensing_time + number_coah_lta_products + number_excluded_products_corrupted)
-    
-    # Products found in ROI for selected Sensing Period
-    ScriptOutput2List("Number of products found for selected ROI and Sensing Period: " + str(number_found_products), log_list)
-    # Products processed in ROI for selected Sensing Period
-    ScriptOutput2List("Number of products processed for selected ROI and Sensing Period: " + str(number_processed_products), log_list)
-    # Products excluded (old format)
-    ScriptOutput2List("Number of products excluded (old format): " + str(number_excluded_products_old_format), log_list)
-    if number_excluded_products_old_format != 0:
-        excluded_products_old_format = "\n".join(excluded_products_old_format)
-        ScriptOutput2List(excluded_products_old_format, log_list)  
-    # Products excluded (ROI falls 100% on no data side of partial tile or scene have same sensing time)
-    ScriptOutput2List("Number of products excluded (100% no data or same sensing time): " + str(number_excluded_products_no_data_sensing_time), log_list)
-    if number_excluded_products_no_data_sensing_time != 0:
-        excluded_products_no_data_sensing_time = "\n".join(excluded_products_no_data_sensing_time)
-        ScriptOutput2List(excluded_products_no_data_sensing_time, log_list)
-    # Products COAH LTA (product not available for retrieval from LTA)
-    ScriptOutput2List("Number of products not available (COAH Long Term Archive): " + str(number_coah_lta_products), log_list)
-    if number_coah_lta_products != 0:
-        coah_lta_products = "\n".join(coah_lta_products)
-        ScriptOutput2List(coah_lta_products, log_list)
-    # Corrupted products (some bands or metadata not available during download)
-    ScriptOutput2List("Number of corrupted products: " + str(number_excluded_products_corrupted), log_list)
-    if number_excluded_products_corrupted != 0:
-        excluded_products_corrupted = "\n".join(excluded_products_corrupted)
-        ScriptOutput2List(excluded_products_corrupted, log_list)
 
 else:
     print("Failed to pré-start script.\n")
