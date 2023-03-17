@@ -16,9 +16,9 @@ def input_checker():
     Input: User inputs based on User_Inputs.py
     Output: inputs_flag - Can be 0 if at least one input fails or 1 if all inputs pass. 
     """
-    from configs.User_Inputs import search, service, roi, nrt_sensing_period, sensing_period
+    from configs.User_Inputs import search, service, service_options, roi, nrt_sensing_period, sensing_period
     from configs.User_Inputs import stream_processing
-    from configs.User_Inputs import download, download_options
+    from configs.User_Inputs import download
     from configs.User_Inputs import atmospheric_correction
     from configs.User_Inputs import masking, masking_options
     from configs.User_Inputs import classification, classification_options
@@ -37,6 +37,20 @@ def input_checker():
     else:
         inputs_flag = inputs_flag*0
         print("'service' is not string.")
+
+    if isinstance(service_options, dict):
+        if len(service_options) == 2:
+            if isinstance(service_options["lta_attempts"], int) and isinstance(service_options["generate_token"], bool):
+                inputs_flag = inputs_flag*1
+            else:
+                inputs_flag = inputs_flag*0
+                print("'service_options' has incorrect values.")
+        else:
+            inputs_flag = inputs_flag*0
+            print("'service_options' does not have dimension 2.")
+    else:
+        inputs_flag = inputs_flag*0
+        print("'service_options' is not dictionary.")
 
     if isinstance(roi, dict):
         if len(roi) == 2:
@@ -83,20 +97,6 @@ def input_checker():
     else:
         inputs_flag = inputs_flag*0
         print("'download' is not boolean.")
-
-    if isinstance(download_options, dict):
-        if len(download_options) == 1:
-            if isinstance(download_options["lta_attempts"], int):
-                inputs_flag = inputs_flag*1
-            else:
-                inputs_flag = inputs_flag*0
-                print("'download_options' has incorrect values.")
-        else:
-            inputs_flag = inputs_flag*0
-            print("'download_options' does not have dimension 1.")
-    else:
-        inputs_flag = inputs_flag*0
-        print("'download_options' is not dictionary.")
 
     if isinstance(atmospheric_correction, bool):
         inputs_flag = inputs_flag*1
