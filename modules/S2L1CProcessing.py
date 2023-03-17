@@ -15,7 +15,9 @@ import zipfile
 import sys
 from xml.dom import minidom
 import shutil
-from osgeo import gdal
+import requests
+from dotenv import load_dotenv, set_key
+from datetime import datetime, timedelta
 
 # Import FeLS (GitHub clone)
 Basepath = os.getcwd()
@@ -200,6 +202,183 @@ def DownloadTile_from_URL_COAH(COAHuser, COAHpass,url,S2L1CproductsFolder,LTAatt
         print(OutputLog)
 
     return LogList
+
+#######################################################################################################################################
+def generate_tokens(username, password, refresh_token=None):
+    """
+    This function generates the access and refresh tokens from Copernicus Data Space Ecosystem (CDSE).
+    The access token can be generated using CDSE credentials or refresh token.
+    Input:  username - CDSE user.
+            password - CDSE password.
+            refresh_token - Refresh token. If None, access token will be generated with credentials.
+    Output: access_token - Access token.
+            refresh_token - Refresh token.
+    """
+    try:
+        # Current CDSE url
+        url = 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token'
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+        # Check if refresh token already exists - Code from CDSE documentation
+        if isinstance(refresh_token, str) and refresh_token != "none":
+            print("Generating access token from refresh token...")
+            payload = {'grant_type': 'refresh_token',
+                       'refresh_token': refresh_token,
+                       'client_id': 'cdse-public'}
+            response = requests.post(url, headers=headers, data=payload)
+            response_code = response.status_code
+            # Check responses for access
+            if response_code == 401:
+                print("401 Unauthorized - Check your refresh token.")
+                access_token = "none"
+            elif response_code == 400:
+                print("400 Bad Request - Check your refresh token.")
+                access_token = "none"
+            elif response_code == 200:
+                access_token = response.json()['access_token']
+                print("Done.")
+            else:
+                print(response_code)
+                access_token = "none"
+        else:
+            print("Generating access and refresh tokens from credentials...")
+            payload = {'grant_type': 'password',
+                       'username': username,
+                       'password': password,
+                       'client_id': 'cdse-public'}
+            response = requests.post(url, headers=headers, data=payload)
+            response_code = response.status_code
+            # Check responses for access
+            if response_code == 401:
+                print("401 Unauthorized - Check your credentials.")
+                access_token = "none"
+                refresh_token = "none"
+            elif response_code == 200:
+                access_token = response.json()['access_token']
+                refresh_token = response.json()['refresh_token']
+                print("Done.")
+            elif response_code == 400:
+                print("400 Bad Request - Check your credentials.")
+                access_token = "none"
+                refresh_token = "none"
+            else:
+                print(response_code)
+                access_token = "none"
+                refresh_token = "none"
+    except Exception as e:
+        print(str(e))
+        access_token = "none" 
+        refresh_token = "none"
+    print("") 
+
+    return access_token, refresh_token
+
+#######################################################################################################################################
+def save_tokens(access_token, refresh_token, env_path):
+    """
+    This function saves CDSE tokens inside an .env file.
+    Input: access_token - CDSE access token. String.
+           refresh_token - CDSE refresh token. String.
+           env_path - Path to .env file, where the tokens will be saved. String.
+    Output: Tokens saved in .env file.
+    """
+    # Check .env file
+    if not os.path.exists(env_path):
+        with open(env_path, "w") as f:
+            # Write variables
+            f.write('\n\n# CDSE Tokens\n')
+            f.write('CDSE_ACCESS_TOKEN=' + access_token)
+            f.write('\n')
+            f.write('CDSE_REFRESH_TOKEN=' + refresh_token)
+            f.write('\n\n')
+    else:
+        load_dotenv(env_path)
+        set_key(env_path, "CDSE_ACCESS_TOKEN", access_token)
+        set_key(env_path, "CDSE_REFRESH_TOKEN", refresh_token)
+
+#######################################################################################################################################
+def collect_s2l1c_CDSE(roi, sensing_period, output_folder):
+    """
+    This function searches Sentinel-2 Level-1C products based on user parameters from 
+    Copernicus Data Space Ecosystem (CDSE). The IDs and Names of products are collected 
+    inside a text file.
+    Input:  roi - Region of Interest according to SentinelHub EO Browser. Dictionary.
+            sensing_period - StartDate and EndDate. Tuple of strings as ('YYYYMMDD','YYYYMMDD').
+            output_folder - Folder where list of IDs and Names will be saved. String.
+    Output: List of collected products in a txt file.
+    """
+    # CDSE base url - Might change in the future
+    base_url = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products"
+    
+    # ROI
+    polygon_0 = str(tuple([item for sublist in roi["coordinates"][0] for item in sublist]))
+    polygon = ",".join([f"{a}{b}" for a, b in zip(polygon_0.split(",")[0::2], polygon_0.split(",")[1::2])])
+
+    # Sensing Period
+    start_date_in = datetime.strptime(sensing_period[0], "%Y%m%d") 
+    start_date = start_date_in.strftime("%Y-%m-%d")
+    end_date_plus1 = datetime.strptime(sensing_period[1], "%Y%m%d") + timedelta(days=1)
+    end_date = end_date_plus1.strftime("%Y-%m-%d")
+
+    # Search products
+    print("Searching for Sentinel-2 L1C products on Copernicus Data Space Ecosystem...")
+    url = base_url + "?$filter=Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq 'S2MSI1C') and ContentDate/Start ge {start_date}T00:00:00.000Z and ContentDate/End le {end_date}T00:00:00.000Z and OData.CSC.Intersects(area=geography'SRID=4326;POLYGON({polygon})')".format(start_date=start_date, end_date=end_date, polygon=polygon)
+    response = requests.get(url)
+    response_code = response.status_code
+    if response_code == 200:
+        response_values = response.json()['value']
+        if len(response_values) != 0:
+            print("Found " + str(len(response_values)) + " products.")
+            products_list = []
+            for i in response_values:
+                url_safe = base_url + "(" + i["Id"] + ")/$value/" + str(i["Name"])
+                products_list.append(url_safe)    
+        else:
+            print("No products found.")
+            products_list = []
+    else:
+        print("Response: " + str(response_code))
+
+    # Save to text file
+    text_file = open(os.path.join(output_folder, "S2L1CProducts_URLs.txt"), "wt")
+    text_file.write('\n'.join(products_list) + "\n")
+    text_file.close()
+    print("")
+
+#######################################################################################################################################
+def download_s2l1c_CDSE(access_token, url_safe, output_folder):
+    """
+    This function downloads a Sentinel-2 Level-1C product using a download link collected from 
+    Copernicus Data Space Ecosystem (CDSE).
+    Input: access_token - Access token that gives permission to download.
+           url_safe - product download link together with SAFE product name.
+           output_folder - Folder path where the products will be saved. String.
+    Output: Download of S2L1C product.
+    """
+    # Split url
+    safe_file_name = url_safe.split('/')[-1]
+    url = url_safe.replace("/"+safe_file_name,"")
+    product_path = os.path.join(output_folder, safe_file_name[:-4]+".zip")
+
+    # Download
+    print("Downloading " + safe_file_name +"...")
+    headers = {'Authorization': 'Bearer {}'.format(access_token)}
+    response = requests.get(url, headers=headers)
+    response_code = response.status_code
+    if response_code == 200:
+        with open(product_path, 'wb') as f:
+           f.write(response.content)
+        print("Done.")
+    else:
+        print("Unable to download. Response: " + str(response_code))
+
+    # Unzip
+    if os.path.exists(product_path):
+        with zipfile.ZipFile(product_path) as product_zip:
+            product_zip.extractall(output_folder)
+        # Delete zip
+        os.remove(product_path)
+    print("")
 
 #######################################################################################################################################
 def ACacolite(FilesToAC, OutputFolder, EDuser, EDpass, ROI):
