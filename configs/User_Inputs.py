@@ -24,6 +24,16 @@ search = True
 # Other strings will be considered as "CDSE".
 service = "GC"
 
+# Search service options:
+# Other inputs besides dictionary with correct values will stop the pré-start.
+                   # Number of Long Term Archive attempts for COAH service.
+                   # Minimum is 1 attempt. Script waits 60 seconds between each attempt.
+service_options = {"lta_attempts": 2,
+                   # If first time using CDSE, generate an acess token. 
+                   # Needs to have credentials or refresh token inside .env file.
+                   # Access token will be saved inside same .env file. 
+                   "generate_token": True} 
+
 # Region Of Interest (ROI): 
 # SentinelHub EOBrowser (https://apps.sentinel-hub.com/eo-browser/) format. 
 # Also used by ACOLITE. If ROI has limits outside the product, ACOLITE will ignore.
@@ -59,12 +69,6 @@ stream_processing = True
 # Download Sentinel-2 L1C Products from the GC or COAH services using URLs file. 
 # Other inputs besides bool will stop the pré-start.
 download = True
-
-# Download options.
-# Other inputs besides dictionary with correct values will stop the pré-start.
-                    # Number of Long Term Archive attempts for COAH service.
-                    # Minimum is 1 attempt. Script waits 60 seconds between each attempt.
-download_options = {"lta_attempts": 2}  
 
 
 # Atmospheric correction of Sentinel-2 L1C Products using ACOLITE. 
