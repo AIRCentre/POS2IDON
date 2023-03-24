@@ -137,7 +137,7 @@ def delete_intermediate(ac_product, masked_product, classification_product, mode
         sc_mosaics = os.path.join(sc_maps, "Mosaics")
         delete_folder(sc_mosaics)
         # Single TIFs
-        sc_single_tifs = glob.glob(os.path.join(sc_maps, "*scmap.tif"))
+        sc_single_tifs = glob.glob(os.path.join(sc_maps, "*patch*scmap.tif"))
         for single_tif in sc_single_tifs:
             delete_file(single_tif)
 
@@ -147,7 +147,7 @@ def delete_intermediate(ac_product, masked_product, classification_product, mode
         proba_mosaics = os.path.join(proba_maps, "Mosaics")
         delete_folder(proba_mosaics)
         # Single TIFs
-        proba_single_tifs = glob.glob(os.path.join(proba_maps, "*probamap.tif"))
+        proba_single_tifs = glob.glob(os.path.join(proba_maps, "*patch*probamap.tif"))
         for single_tif in proba_single_tifs:
             delete_file(single_tif)
 
