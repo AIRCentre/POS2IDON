@@ -151,9 +151,8 @@ def mosaic_two_patches(left_or_top, right_or_bottom, output_folder, counter, axi
             new_profile = lot_tif.profile
             new_profile.update(width=new_width, transform=rio.transform.from_bounds(lot_left, lot_bottom, rob_right, lot_top, new_width, lot_tif.height))
             new_data = np.concatenate((lot_non_overlap, lot_data, rob_data, rob_non_overlap), axis=2)
-
-            with rio.open(os.path.join(output_folder, "mosaic_row-" + str(counter) + ".tif"), 'w', **new_profile) as new_tif:
-                new_tif.write(new_data)
+        with rio.open(os.path.join(output_folder, "mosaic_row-" + str(counter) + ".tif"), 'w', **new_profile) as new_tif:
+            new_tif.write(new_data)
     else:
         # Open the top and bottom TIFF files
         with rio.open(left_or_top) as lot_tif, rio.open(right_or_bottom) as rob_tif:
@@ -189,9 +188,8 @@ def mosaic_two_patches(left_or_top, right_or_bottom, output_folder, counter, axi
             new_profile = rob_tif.profile
             new_profile.update(height=new_height, transform=rio.transform.from_bounds(rob_left, rob_bottom, rob_right, lot_top, rob_tif.width, new_height))
             new_data = np.concatenate((lot_non_overlap, lot_data, rob_data, rob_non_overlap), axis=1)
-
-            with rio.open(os.path.join(output_folder, "mosaic_column-" + str(counter) + ".tif"), 'w', **new_profile) as new_tif:
-                new_tif.write(new_data)
+        with rio.open(os.path.join(output_folder, "mosaic_column-" + str(counter) + ".tif"), 'w', **new_profile) as new_tif:
+            new_tif.write(new_data)
 
 #######################################################################################################################################
 def mosaic_patches(input_folder, output_folder, final_mosaic_name):
