@@ -19,7 +19,7 @@ search = True
 # Search service:
 # "COAH" (Copernicus Open Access Hub - better for recent data and near real time application). 
 # "GC" (Google Cloud - better for old data and long term application).
-# "CDSE" (Copernicus Data Space Ecosystem) - NOT YET AVAILABLE.
+# "CDSE" (Copernicus Data Space Ecosystem - the new ESA service).
 # Other inputs besides string will stop the pré-start.
 # Other strings will be considered as "CDSE".
 service = "GC"
@@ -28,7 +28,7 @@ service = "GC"
 # Other inputs besides dictionary with correct values will stop the pré-start.
                    # Number of Long Term Archive attempts for COAH service.
                    # Minimum is 1 attempt. Script waits 60 seconds between each attempt.
-service_options = {"lta_attempts": 2,
+service_options = {"lta_attempts": 5,
                    # If first time using CDSE, generate an acess token. 
                    # Needs to have credentials or refresh token inside .env file.
                    # Access token will be saved inside same .env file. 
@@ -132,9 +132,9 @@ classification_options = {"split_and_mosaic": False,
                           # "GPUpt" for model converted to pytorch and processed on GPU. Max size of model limited by GPU memory.
                           # None for Unet models.
                           "model_type": "sk",
-                          # Number of classification classes. 6 or 11
+                          # Number of classification classes. 6 or 11. Change when changing model.
                           "n_classes": 11,
-                          # Tuple of features to consider, must match the ones used during model train.
+                          # Tuple of features to consider, must match the ones used during model train. Change when changing model.
                           # Features available are ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI') or ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FDI', 'NDWI', 'NDMI')
                           "features": ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI'),
                           # Only used for Unet models. Number of hidden channels.
