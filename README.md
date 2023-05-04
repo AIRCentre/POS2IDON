@@ -26,17 +26,21 @@ activate it:
 conda activate pos2idon-env
 ```
 
-and install libraries in the following order (tested on Windows 11 and macOS Ventura):
+and install libraries in the following order(can take up to 5 minutes):
+
+(macOS Ventura):
 ```
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
+conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 s2cloudless==1.7.0
 ```
+(Windows):
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 s2cloudless==1.7.0
+conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
-(can take up to 5 minutes)
-```
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 s2cloudless==1.7.0 
-```
+
 
 Tested with Conda version 4.12.0 and Pip version 23.0.1.
 
