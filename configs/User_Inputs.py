@@ -136,6 +136,7 @@ classification_options = {"split_and_mosaic": False,
                           "n_classes": 11,
                           # Tuple of features to consider, must match the ones used during model train. Change when changing model.
                           # Features available are ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI') or ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FDI', 'NDWI', 'NDMI')
+                          # For Unet use only the 11 bands as features
                           "features": ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI'),
                           # Only used for Unet models. Number of hidden channels.
                           "n_hchannels": 16,
