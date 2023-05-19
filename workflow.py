@@ -277,15 +277,12 @@ if pre_start_flag == 1:
                            
                             # -> Water mask with ESA Worldcover
                             if masking_options["use_existing_ESAwc"] == False:
-                                if len(glob.glob(os.path.join(esa_wc_folder, "*.tif"))) == 0:
-                                    # TS credentials
-                                    ts_user = os.getenv(evariables[2])
-                                    ts_pass = os.getenv(evariables[3])
-                                    # Download ESA WorldCover Maps
-                                    log_list_append, esa_wc_non_existing = Download_WorldCoverMaps([ts_user, ts_pass], stack_geometry, esa_wc_folder) 
-                                    ScriptOutput2List("", log_list)
-                                else:
-                                    ScriptOutput2List("\nDownload of ESA WorldCover maps ignored, since tiles already exist.", log_list)  
+                                # TS credentials
+                                ts_user = os.getenv(evariables[2])
+                                ts_pass = os.getenv(evariables[3])
+                                # Download ESA WorldCover Maps
+                                log_list_append, esa_wc_non_existing = Download_WorldCoverMaps([ts_user, ts_pass], stack_geometry, esa_wc_folder) 
+                                ScriptOutput2List("", log_list)
                             else:
                                 ScriptOutput2List("\nDownload of ESA WorldCover maps ignored.", log_list)
                                 if len(glob.glob(os.path.join(esa_wc_folder, "*.tif"))) == 0:
