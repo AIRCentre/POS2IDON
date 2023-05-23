@@ -86,7 +86,7 @@ masking = True
 # Other inputs besides dictionary with correct values will stop the pré-start.
                    # Use existing ESA WorldCover Tiles that are inside 2-1_ESA_Worldcover to create water mask.
                    # If False, it will download the tiles.
-                   # Ignore water mask by using option True without tiles in the 2-1_ESA_Worldcover folder.
+                   # Ignore water mask by using option True, and leave empty the 2-1_ESA_Worldcover folder.
 masking_options = {"use_existing_ESAwc": False,  
                    # Buffer size applied to land, 0 to ignore.
                    "land_buffer": 0,
