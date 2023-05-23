@@ -17,12 +17,12 @@ Credentials must be modified in the hidden .env file.
 search = True
 
 # Search service:
+# "CDSE" (Copernicus Data Space Ecosystem - the new ESA service).
 # "COAH" (Copernicus Open Access Hub - better for recent data and near real time application). 
 # "GC" (Google Cloud - better for old data and long term application).
-# "CDSE" (Copernicus Data Space Ecosystem - the new ESA service).
 # Other inputs besides string will stop the pré-start.
 # Other strings will be considered as "CDSE".
-service = "GC"
+service = "CDSE"
 
 # Search service options:
 # Other inputs besides dictionary with correct values will stop the pré-start.
@@ -50,7 +50,7 @@ nrt_sensing_period = False
 # Used only if nrt_sensing_period = False.
 # (StartDate, EndDate).
 # Other inputs besides tuple with correct values will stop the pré-start.
-sensing_period = ('20200918', '20200918')
+sensing_period = ('20200917', '20200919')
 
 # STREAM PROCESSING ########################################################################
 
@@ -74,6 +74,7 @@ download = True
 # Atmospheric correction of Sentinel-2 L1C Products using ACOLITE. 
 # s2l1c_products_folder must exist with data.
 # Other inputs besides bool will stop the pré-start.
+# Outputs are Surface_Reflectance_Bands (BOA), Top_Atmosphere_Bands (TOA) and Reyleigh Corrected Reflectances stored in the stack raster file.
 atmospheric_correction = True
 
 
