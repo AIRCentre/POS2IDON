@@ -39,15 +39,16 @@ def input_checker():
         print("'service' is not string.")
 
     if isinstance(service_options, dict):
-        if len(service_options) == 2:
-            if isinstance(service_options["lta_attempts"], int) and isinstance(service_options["generate_token"], bool):
+        if len(service_options) == 3:
+            if isinstance(service_options["lta_attempts"], int) and isinstance(service_options["generate_token"], bool) and\
+                  isinstance(service_options["filter"], str):
                 inputs_flag = inputs_flag*1
             else:
                 inputs_flag = inputs_flag*0
                 print("'service_options' has incorrect values.")
         else:
             inputs_flag = inputs_flag*0
-            print("'service_options' does not have dimension 2.")
+            print("'service_options' does not have dimension 3.")
     else:
         inputs_flag = inputs_flag*0
         print("'service_options' is not dictionary.")
