@@ -234,7 +234,6 @@ def generate_tokens(username, password, refresh_token=None):
             elif response_code == 400:
                 print("400 Bad Request - Using credentials to generate token.")
                 use_credentials = True
-                access_token = ""
             elif response_code == 200:
                 access_token = response.json()['access_token']
                 use_credentials = False
