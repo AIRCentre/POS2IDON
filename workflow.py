@@ -9,9 +9,9 @@ Atlantic International Research Centre (AIR Centre - EO LAB), Terceira, Azores, 
 """
 ### FULL PRÉ-START #########################################################################
 print("\n")
-print("|----------------------------------------------------------------------------|")
-print("| WELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 |")
-print("|----------------------------------------------------------------------------|")
+print("|-----------------------------------------------------------------------------|")
+print("|  WELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 |")
+print("|-----------------------------------------------------------------------------|")
 print("\n")
 
 # Init script outputs list to save as log file
@@ -120,19 +120,16 @@ if pre_start_flag == 1:
             ScriptOutput2List("Using Yesterday date as Start Date...", log_list)
             sensing_period = NearRealTimeSensingDate()
 
-        # Search products using GC or COAH
+        # Search products using GC, CDSE or COAH
         try:
             if service == "COAH":
                 log_list_append = CollectDownloadLinkofS2L1Cproducts_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), roi, sensing_period, s2l1c_products_folder)  
             elif service == "GC":
                 log_list_append = CollectDownloadLinkofS2L1Cproducts_GC(roi, sensing_period, "configs", s2l1c_products_folder) 
-            else: # CDSE
-                collect_s2l1c_CDSE(roi, sensing_period, s2l1c_products_folder)
-                if service_options["generate_token"] == True:
-                    access_token, refresh_token = generate_tokens(os.getenv(evariables[6]), os.getenv(evariables[7]), refresh_token=os.getenv("CDSE_REFRESH_TOKEN"))
-                    save_tokens(access_token, refresh_token, env_path)
-                else:
-                    access_token = os.getenv("CDSE_ACCESS_TOKEN")  
+            elif service == "CDSE":
+                collect_s2l1c_CDSE(roi, sensing_period, s2l1c_products_folder) 
+            else:
+                ScriptOutput2List("Data provider not defined.\n", log_list) 
         except Exception as e:
             ScriptOutput2List(str(e) + "\n", log_list)
     else:
@@ -160,11 +157,24 @@ if pre_start_flag == 1:
             if classification == True:
                 CreateBrandNewFolder(classification_products_folder)
 
+            # CDSE token to use on Download
+            if (download == True) and (service == "CDSE"):
+                if service_options["generate_token"] == True:
+                    access_token, refresh_token = generate_tokens(os.getenv(evariables[6]), os.getenv(evariables[7]), refresh_token=os.getenv("CDSE_REFRESH_TOKEN"))
+                    save_tokens(access_token, refresh_token, env_path)
+                else:
+                    access_token = os.getenv("CDSE_ACCESS_TOKEN")
+
             # Create lists of excluded products names to print in the log file
             excluded_products_old_format = []
             excluded_products_no_data_sensing_time = []
             excluded_products_corrupted = []
             coah_lta_products = []
+
+            # Filter products URLs
+            urls_list, urls_ignored = filter_safe_products(urls_list, service_options["filter"])
+            if len(urls_ignored) != 0:
+                ScriptOutput2List("Some URLs have been ignored, because of filtering option.", log_list)
 
             # Start loop on urls list
             ScriptOutput2List("", log_list)
@@ -192,9 +202,10 @@ if pre_start_flag == 1:
                             if not os.path.exists(safe_file_path):
                                 excluded_products_old_format.append(safe_file_name)
                                 ScriptOutput2List("The scene is in the redundant OPER old-format (before Nov 2016).Product excluded.\n", log_list)
-                        else: #CDSE
-                            # Download
-                            download_s2l1c_CDSE(access_token, url, s2l1c_products_folder) 
+                        elif service == "CDSE":
+                            download_s2l1c_CDSE(access_token, url, s2l1c_products_folder)
+                        else:
+                            ScriptOutput2List("Data provider not defined.\n", log_list) 
                     else:
                         ScriptOutput2List("Download of product ignored.\n", log_list)
                 except Exception as e:
@@ -486,7 +497,7 @@ POS2IDON_timef = time.time()
 # Duration of POS2IDON
 POS2IDON_timep = int(POS2IDON_timef - POS2IDON_time0)
 
-ScriptOutput2List("\nPS2IDON total time: "+str(POS2IDON_timep)+" seconds.\n", log_list)
+ScriptOutput2List("\nPOS2IDON total time: "+str(POS2IDON_timep)+" seconds.\n", log_list)
 
 # Save log
 ScriptOutputs2LogFile(log_list, "4_LogFile")

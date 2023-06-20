@@ -1,0 +1,14 @@
+# QGIS Generated Color Map Export File
+INTERPOLATION:INTERPOLATED
+0,255,0,255,0,No data
+10,0,100,0,255,Tree cover
+20,255,187,34,255,Shrubland
+30,255,255,76,255,Grassland
+40,240,150,255,255,Cropland
+50,250,0,0,255,Built-up
+60,180,180,180,255,Bare/sparse vegetation
+70,240,240,240,255,Snow and ice
+80,0,100,200,255,Permanent water bodies
+90,0,150,160,255,Herbaceous wetland
+95,0,207,117,255,Mangroves
+100,250,230,160,255,Moss and lichen

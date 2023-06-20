@@ -220,7 +220,7 @@ def generate_tokens(username, password, refresh_token=None):
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         # Check if refresh token already exists - Code from CDSE documentation
-        if isinstance(refresh_token, str) and refresh_token != "none":
+        if isinstance(refresh_token, str) and (refresh_token != ""):
             print("Generating access token from refresh token...")
             payload = {'grant_type': 'refresh_token',
                        'refresh_token': refresh_token,
@@ -229,18 +229,22 @@ def generate_tokens(username, password, refresh_token=None):
             response_code = response.status_code
             # Check responses for access
             if response_code == 401:
-                print("401 Unauthorized - Check your refresh token.")
-                access_token = "none"
+                print("401 Unauthorized - Using credentials to generate token.")
+                use_credentials = True
             elif response_code == 400:
-                print("400 Bad Request - Check your refresh token.")
-                access_token = "none"
+                print("400 Bad Request - Using credentials to generate token.")
+                use_credentials = True
             elif response_code == 200:
                 access_token = response.json()['access_token']
+                use_credentials = False
                 print("Done.")
             else:
-                print(response_code)
-                access_token = "none"
+                print(str(response_code) + " - Using credentials to generate token.")
+                use_credentials = True
         else:
+            use_credentials = True
+        
+        if use_credentials == True:
             print("Generating access and refresh tokens from credentials...")
             payload = {'grant_type': 'password',
                        'username': username,
@@ -251,24 +255,25 @@ def generate_tokens(username, password, refresh_token=None):
             # Check responses for access
             if response_code == 401:
                 print("401 Unauthorized - Check your credentials.")
-                access_token = "none"
-                refresh_token = "none"
+                access_token = ""
+                refresh_token = ""
             elif response_code == 200:
                 access_token = response.json()['access_token']
                 refresh_token = response.json()['refresh_token']
                 print("Done.")
             elif response_code == 400:
                 print("400 Bad Request - Check your credentials.")
-                access_token = "none"
-                refresh_token = "none"
+                access_token = ""
+                refresh_token = ""
             else:
                 print(response_code)
-                access_token = "none"
-                refresh_token = "none"
+                access_token = ""
+                refresh_token = ""
+
     except Exception as e:
         print(str(e))
-        access_token = "none" 
-        refresh_token = "none"
+        access_token = "" 
+        refresh_token = ""
     print("") 
 
     return access_token, refresh_token
@@ -325,7 +330,7 @@ def collect_s2l1c_CDSE(roi, sensing_period, output_folder):
     url = base_url + "?$filter=Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq 'S2MSI1C') and ContentDate/Start ge {start_date}T00:00:00.000Z and ContentDate/End le {end_date}T00:00:00.000Z and OData.CSC.Intersects(area=geography'SRID=4326;POLYGON({polygon})')".format(start_date=start_date, end_date=end_date, polygon=polygon)
     response = requests.get(url)
     response_code = response.status_code
-    if response_code == 200:
+    if response_code in (200, 308):
         response_values = response.json()['value']
         if len(response_values) != 0:
             print("Found " + str(len(response_values)) + " products.")
@@ -362,15 +367,20 @@ def download_s2l1c_CDSE(access_token, url_safe, output_folder):
 
     # Download
     print("Downloading " + safe_file_name +"...")
-    headers = {'Authorization': 'Bearer {}'.format(access_token)}
-    response = requests.get(url, headers=headers)
-    response_code = response.status_code
-    if response_code == 200:
+    session = requests.Session()
+    session.headers.update({'Authorization': 'Bearer {}'.format(access_token)})
+    response = session.get(url, allow_redirects=False)
+    while response.status_code in (301, 302, 303, 307):
+        url = response.headers['Location']
+        response = session.get(url, allow_redirects=False)
+
+    if response.status_code in (200, 308):
+        file = session.get(url, verify=True, allow_redirects=True)
         with open(product_path, 'wb') as f:
-           f.write(response.content)
+           f.write(file.content)
         print("Done.")
     else:
-        print("Unable to download. Response: " + str(response_code))
+        print("Unable to download. Response: " + str(response.status_code))
 
     # Unzip
     if os.path.exists(product_path):
