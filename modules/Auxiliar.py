@@ -190,5 +190,27 @@ def delete_intermediate(ac_product, masked_product, classification_product, mode
         print("Mode not available.")
 
 #################################################################################################
+def filter_safe_products(urls_list, filter):
+    """
+    This function filters SAFE products URLs.
+    Inputs: urls_list - List with all products URLs. 
+            filter - Filter specific combinations in the products URLs. String.
+    Outputs: urls_list_filtered - List of products URLs to consider.
+             urls_list_ignored - List of products URLs to ignore.
+    """
+    urls_list_filtered = []
+    urls_list_ignored = []
+    if filter != "":
+        for i, url in enumerate(urls_list):
+            safe_file_name = url.split('/')[-1]
+            if filter in safe_file_name:
+                urls_list_filtered.append(url)
+            else:
+                urls_list_ignored.append(url)
+    else:
+        urls_list_filtered = urls_list.copy()
+
+    return urls_list_filtered, urls_list_ignored
+
 
         
