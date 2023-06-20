@@ -126,8 +126,10 @@ if pre_start_flag == 1:
                 log_list_append = CollectDownloadLinkofS2L1Cproducts_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), roi, sensing_period, s2l1c_products_folder)  
             elif service == "GC":
                 log_list_append = CollectDownloadLinkofS2L1Cproducts_GC(roi, sensing_period, "configs", s2l1c_products_folder) 
-            else: # CDSE
-                collect_s2l1c_CDSE(roi, sensing_period, s2l1c_products_folder)  
+            elif service == "CDSE":
+                collect_s2l1c_CDSE(roi, sensing_period, s2l1c_products_folder) 
+            else:
+                ScriptOutput2List("Data provider not defined.\n", log_list) 
         except Exception as e:
             ScriptOutput2List(str(e) + "\n", log_list)
     else:
@@ -156,7 +158,7 @@ if pre_start_flag == 1:
                 CreateBrandNewFolder(classification_products_folder)
 
             # CDSE token to use on Download
-            if download == True:
+            if (download == True) and (service == "CDSE"):
                 if service_options["generate_token"] == True:
                     access_token, refresh_token = generate_tokens(os.getenv(evariables[6]), os.getenv(evariables[7]), refresh_token=os.getenv("CDSE_REFRESH_TOKEN"))
                     save_tokens(access_token, refresh_token, env_path)
@@ -200,8 +202,10 @@ if pre_start_flag == 1:
                             if not os.path.exists(safe_file_path):
                                 excluded_products_old_format.append(safe_file_name)
                                 ScriptOutput2List("The scene is in the redundant OPER old-format (before Nov 2016).Product excluded.\n", log_list)
-                        else: #CDSE
-                            download_s2l1c_CDSE(access_token, url, s2l1c_products_folder) 
+                        elif service == "CDSE":
+                            download_s2l1c_CDSE(access_token, url, s2l1c_products_folder)
+                        else:
+                            ScriptOutput2List("Data provider not defined.\n", log_list) 
                     else:
                         ScriptOutput2List("Download of product ignored.\n", log_list)
                 except Exception as e:
