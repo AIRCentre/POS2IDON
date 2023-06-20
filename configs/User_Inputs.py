@@ -17,12 +17,13 @@ Credentials must be modified in the hidden .env file.
 search = True
 
 # Search service:
+# "CDSE" (Copernicus Data Space Ecosystem - the new ESA service).
 # "COAH" (Copernicus Open Access Hub - better for recent data and near real time application). 
 # "GC" (Google Cloud - better for old data and long term application).
 # "CDSE" (Copernicus Data Space Ecosystem - the new ESA service). Full archive soon!
 # Other inputs besides string will stop the pré-start.
-# Other strings will be considered as not defined.
-service = "GC"
+# Other strings will be considered as "CDSE".
+service = "CDSE"
 
 # Search service options:
 # Other inputs besides dictionary with correct values will stop the pré-start.
@@ -54,7 +55,7 @@ nrt_sensing_period = False
 # Used only if nrt_sensing_period = False.
 # (StartDate, EndDate).
 # Other inputs besides tuple with correct values will stop the pré-start.
-sensing_period = ('20200918', '20200918')
+sensing_period = ('20200917', '20200919')
 
 # STREAM PROCESSING ########################################################################
 
@@ -78,6 +79,7 @@ download = True
 # Atmospheric correction of Sentinel-2 L1C Products using ACOLITE. 
 # s2l1c_products_folder must exist with data.
 # Other inputs besides bool will stop the pré-start.
+# Outputs are Surface_Reflectance_Bands (BOA), Top_Atmosphere_Bands (TOA) and Reyleigh Corrected Reflectances stored in the stack raster file.
 atmospheric_correction = True
 
 
@@ -90,7 +92,7 @@ masking = True
 # Other inputs besides dictionary with correct values will stop the pré-start.
                    # Use existing ESA WorldCover Tiles that are inside 2-1_ESA_Worldcover to create water mask.
                    # If False, it will download the tiles.
-                   # Ignore water mask by using option True without tiles in the 2-1_ESA_Worldcover folder.
+                   # Ignore water mask by using option True, and leave empty the 2-1_ESA_Worldcover folder.
 masking_options = {"use_existing_ESAwc": False,  
                    # Buffer size applied to land, 0 to ignore.
                    "land_buffer": 0,

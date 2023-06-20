@@ -293,7 +293,7 @@ if pre_start_flag == 1:
                                 ts_pass = os.getenv(evariables[3])
                                 # Download ESA WorldCover Maps
                                 log_list_append, esa_wc_non_existing = Download_WorldCoverMaps([ts_user, ts_pass], stack_geometry, esa_wc_folder) 
-                                ScriptOutput2List("", log_list) 
+                                ScriptOutput2List("", log_list)
                             else:
                                 ScriptOutput2List("\nDownload of ESA WorldCover maps ignored.", log_list)
                                 if len(glob.glob(os.path.join(esa_wc_folder, "*.tif"))) == 0:
