@@ -8,6 +8,8 @@ Pré-Start Functions.
 
 ### Import Libraries ############################################################################
 import os
+import zipfile
+import requests
 
 #################################################################################################
 def input_checker():
@@ -222,25 +224,52 @@ def ScriptOutputs2LogFile(ListOfAllOutputs, FolderName):
     LogFile.close()
 
 ################################################################################################
-def CloneModulesFromGitHub(SaveFolder):
+def git_clone_acolite_fels(save_dir):
     """
-    This function clones FeLS and ACOLITE from GitHub and extracts on a folder.
-    Input: SaveFolder - Name (string) of the folder to save the modules.
+    This function clones  ACOLITE and FeLS from GitHub and extracts on a folder.
+    Input: save_dir - Name (string) of the directory to save the modules.
     Output: Modules extracted on folder.
     """
-    FeLSfolder = os.path.join(SaveFolder, "fetchLandsatSentinelFromGoogleCloud-master")
-    ACOLITEfolder = os.path.join(SaveFolder, "acolite-main")
-    
-    if not os.path.exists(FeLSfolder):
-       print("\nCloning FeLS from GitHub...") 
-       FeLSclone = "git clone https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud.git " + FeLSfolder
-       os.system(FeLSclone)
-       print("Done.\n")
+    # ZIP urls
+    acolite_zip_url = "https://github.com/acolite/acolite/archive/master.zip"
+    acolite_name = "acolite-main"
+    fels_zip_url = "https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud/archive/master.zip"
+    fels_name = "fetchLandsatSentinelFromGoogleCloud-master"
 
-    if not os.path.exists(ACOLITEfolder):
-       print("Cloning ACOLITE from GitHub...") 
-       ACOLITEclone = "git clone https://github.com/acolite/acolite.git " + ACOLITEfolder
-       os.system(ACOLITEclone)
-       print("Done.\n")
+    # Download and unzip ACOLITE
+    acolite_path = os.path.join(save_dir, acolite_name)
+    if not os.path.exists(acolite_path):
+        print("\nCloning ACOLITE from GitHub...")
+        try:
+            acolite_r = requests.get(acolite_zip_url)
+            with open(acolite_path+".zip", 'wb') as acolite_f:
+                acolite_f.write(acolite_r.content)
+            
+            with zipfile.ZipFile(acolite_path+".zip") as acolite_zip:
+                acolite_zip.extractall(save_dir)
+            os.remove(acolite_path+".zip")
+        except Exception as e:
+            print("Unable to clone ACOLITE - " + str(e))
+    else:
+        print("\nCloning of ACOLITE from GitHub ignored.")  
+    print("Done.\n")
+
+    # Download FeLS
+    fels_path = os.path.join(save_dir, fels_name)
+    if not os.path.exists(fels_path):
+        print("Cloning FeLS from GitHub...")
+        try:
+            fels_r = requests.get(fels_zip_url)
+            with open(fels_path+".zip", 'wb') as fels_f:
+                fels_f.write(fels_r.content)
+
+            with zipfile.ZipFile(fels_path+".zip") as fels_zip:
+                fels_zip.extractall(save_dir)
+            os.remove(fels_path+".zip")
+        except Exception as e:
+            print("Unable to clone FeLS - " + str(e))
+    else:
+        print("Cloning of FeLS from GitHub ignored.") 
+    print("Done.\n")
 
 ################################################################################################
