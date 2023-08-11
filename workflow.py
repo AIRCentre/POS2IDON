@@ -135,10 +135,10 @@ if pre_start_flag == 1:
     else:
         ScriptOutput2List("Search of products ignored.\n", log_list)
 
-    # STREAM PROCESSING ####################################################################
-    ScriptOutput2List("STREAM PROCESSING", log_list)
+    # PROCESSING ###########################################################################
+    ScriptOutput2List("PROCESSING", log_list)
     urls_file = os.path.join(s2l1c_products_folder, "S2L1CProducts_URLs.txt")
-    if (stream_processing == True) and os.path.isfile(urls_file):
+    if (processing == True) and os.path.isfile(urls_file):
         # Read S2L1CProducts_URLs.txt file        
         urls_list = open(urls_file).read().splitlines()
         if len(urls_list) == 0:
@@ -401,7 +401,7 @@ if pre_start_flag == 1:
                                 ScriptOutput2List("Performing mosaic of patches...", log_list) 
                                 sc_maps_folder = os.path.join(classification_product, "sc_maps")
                                 mosaic_patches(sc_maps_folder, sc_maps_folder, "sc_map_mosaic")
-                                if (classification_options["ml_algorithm"] == "unet") and (masking == True):
+                                if (classification_options["ml_algorithm"] == "unet"):
                                     # Apply later mask to Unet mosaic
                                     mask_stack_later(sc_maps_folder, masked_product, filter_ignore_value=0)
                                     ScriptOutput2List("Final mask applied to Unet mosaic (sc_map).", log_list)
@@ -409,7 +409,7 @@ if pre_start_flag == 1:
                                 if classification_options["classification_probabilities"] == True:
                                     proba_maps_folder = os.path.join(classification_product, "proba_maps")
                                     mosaic_patches(proba_maps_folder, proba_maps_folder, "proba_map_mosaic")
-                                    if (classification_options["ml_algorithm"] == "unet") and (masking == True):
+                                    if (classification_options["ml_algorithm"] == "unet"):
                                         # Apply later mask to Unet mosaic
                                         mask_stack_later(proba_maps_folder, masked_product, filter_ignore_value=0)
                                         ScriptOutput2List("Final mask applied to Unet mosaic (proba_map).", log_list)
@@ -485,7 +485,7 @@ if pre_start_flag == 1:
                 ScriptOutput2List(excluded_products_corrupted, log_list)
 
     else:
-        ScriptOutput2List("Stream Processing ignored.\n", log_list)
+        ScriptOutput2List("Processing ignored.\n", log_list)
 
 else:
     print("Failed to pré-start script.\n")
