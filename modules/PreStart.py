@@ -19,7 +19,7 @@ def input_checker():
     Output: inputs_flag - Can be 0 if at least one input fails or 1 if all inputs pass. 
     """
     from configs.User_Inputs import search, service, service_options, roi, nrt_sensing_period, sensing_period
-    from configs.User_Inputs import stream_processing
+    from configs.User_Inputs import processing
     from configs.User_Inputs import download
     from configs.User_Inputs import atmospheric_correction
     from configs.User_Inputs import masking, masking_options
@@ -89,11 +89,11 @@ def input_checker():
         inputs_flag = inputs_flag*0
         print("'sensing_period' is not tuple.")
 
-    if isinstance(stream_processing, bool):
+    if isinstance(processing, bool):
         inputs_flag = inputs_flag*1
     else:
         inputs_flag = inputs_flag*0
-        print("'stream_processing' is not boolean.")
+        print("'processing' is not boolean.")
 
     if isinstance(download, bool):
         inputs_flag = inputs_flag*1
