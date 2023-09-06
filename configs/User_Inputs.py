@@ -14,7 +14,7 @@ Credentials must be modified in the hidden .env file.
 # If False, this step will be ignored and the products list must exist inside s2l1c_products_folder
 # for the download to work.
 # Other inputs besides bool will stop the pré-start.
-search = True
+search = False
 
 # Search service:
 # "CDSE" (Copernicus Data Space Ecosystem - the new ESA service).
@@ -74,14 +74,14 @@ processing = True
 # True - Downloads Sentinel-2 L1C products from the services using URLs file. 
 # False - Does not download products, it assumes you downloaded already.
 # Other inputs besides bool will stop the pré-start.
-download = True
+download = False
 
 
 # Atmospheric correction of Sentinel-2 L1C Products using ACOLITE. 
 # True - AC products inside s2l1c_products_folder.
 # False - Does not AC products, it assumes they exist already.
 # Other inputs besides bool will stop the pré-start.
-atmospheric_correction = True
+atmospheric_correction = False
 
 
 # Apply masks to the atmospheric corrected product.
@@ -98,7 +98,7 @@ masking = True
 # "cloud_mask": False
                    # Use existing ESA WorldCover Tiles that are inside 2-1_ESA_Worldcover to create water mask.
                    # If False, it will download the tiles.
-masking_options = {"use_existing_ESAwc": False,  
+masking_options = {"use_existing_ESAwc": True,  
                    # Buffer size applied to land, 0 to ignore.
                    "land_buffer": 0,
                    # Apply mask based on 'NDWI' or 'BAND8' (features), None to ignore.
@@ -128,7 +128,7 @@ classification = True
 # Other inputs besides dictionary with correct values will stop the pré-start.                       
                           # Split full image into 256x256 patches and consider each one during classification.
                           # Mosaic all patches into single image after classification.
-classification_options = {"split_and_mosaic": True,
+classification_options = {"split_and_mosaic": False,
                           # Outputs TIF file with the class probability for each pixel.
                           "classification_probabilities": False,
                           # Machine Learning algorithm:
