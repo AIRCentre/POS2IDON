@@ -255,6 +255,45 @@ def Create_Mask_fromBand8(ProductToMask, MaskingProductFolder, Band8threshold, B
     
     return LogList
 
+#################################################################################################################################
+def Create_Nan_Mask(ProductToMask, MaskingProductFolder):
+    """
+    This function creates a mask based on the position of Nan values from the ACOLITE-corrected raster.
+    Input: ProductToMask - Path to the ACOLITE product folder where the stack with Band8 is saved. String.
+           MaskingProductFolder - Folder where the masks will be saved. String.
+    Output: Creation of band Nan based mask.
+            LogList - Function's log outputs. List of strings.
+    """
+    ProductToMaskName = os.path.basename(ProductToMask)
+    # Get stack
+    StackPath = os.path.join(ProductToMask, ProductToMaskName+"_stack.tif") 
+    
+    # Apply a thresholding on the band and get a binary mask
+    Stack = gdal.Open(StackPath)
+    Band1_Data = Stack.GetRasterBand(1).ReadAsArray()
+    Nan_mask = np.isnan(Band1_Data)
+    Band1_Data[Nan_mask] = 1
+    Band1_Data[~Nan_mask] = 0
+    
+    # Save thresholded mask
+    Mask_Nan_PathAndTifName = os.path.join(MaskingProductFolder, ProductToMaskName + "_NAN_Mask.tif")
+    Driver = gdal.GetDriverByName("GTiff")        
+    NIraster = Driver.Create(Mask_Nan_PathAndTifName, Stack.RasterXSize, Stack.RasterYSize, 1, gdal.GDT_Byte)
+    NIraster.SetProjection(Stack.GetProjectionRef())
+    NIraster.SetGeoTransform(Stack.GetGeoTransform())
+    NIrasterBand = NIraster.GetRasterBand(1)
+    NIrasterBand.WriteArray(Nan_mask)
+    NIraster = None
+
+    # Close opened rasters
+    Stack = None
+
+    OutputLog = "Done."
+    LogList = [OutputLog]
+    print(OutputLog)
+    
+    return LogList
+
 ########################################################################################################################################  
 def CloudMasking_S2CloudLess_ROI_10m(ac_product_folder, MaskingProductFolder, S2CL_Threshold, S2CL_Average, S2CL_Dilation):
     """
@@ -553,10 +592,29 @@ def mask_stack(ac_product_folder, masked_product_folder, filter_ignore_value):
 #######################################################################################################################################
 def mask_stack_later(folder_with_mosaic, masked_product_folder, filter_ignore_value):
     """
-    This function is similar to mask_stack function, but used for Unet later masking. 
+    This function is similar to mask_stack function, but used for Unet later masking  and applies and additional nan mask. 
     """
+    # Read nan masks as array
+    masked_product_name = os.path.basename(masked_product_folder)
+    nan_mask_path = os.path.join(masked_product_folder, "Masks", masked_product_name+"_NAN_Mask.tif")
+    nan_mask = gdal.Open(nan_mask_path)
+    nan_mask_band = nan_mask.GetRasterBand(1)
+    nan_mask_data = nan_mask_band.ReadAsArray()
+
+    # Apply nan mask to mosaic
     folder_with_mosaic_name = os.path.basename(folder_with_mosaic)
-    mosaic_path = os.path.join(folder_with_mosaic, folder_with_mosaic_name[:-1]+"_mosaic.tif")
+    mosaic_path = glob.glob(os.path.join(folder_with_mosaic, "*_mosaic.tif"))[0]
+    mosaic = gdal.Open(mosaic_path,gdal.GA_Update)
+    mosaic_band = mosaic.GetRasterBand(1)
+    mosaic_data = mosaic_band.ReadAsArray()
+    assert nan_mask_data.shape == mosaic_data.shape
+    mosaic_data[nan_mask_data == 1] = np.nan
+    mosaic_band.WriteArray(mosaic_data)
+
+    nan_mask = None
+    mosaic = None
+
+    # Apply final mask to mosaic
     mosaic = gdal.Open(mosaic_path)
     mosaic_size = [mosaic.RasterXSize, mosaic.RasterYSize]
  
@@ -569,11 +627,13 @@ def mask_stack_later(folder_with_mosaic, masked_product_folder, filter_ignore_va
 
     # Create masked mosaic
     driver = gdal.GetDriverByName("GTiff")
-    masked_mosaic_path = os.path.join(folder_with_mosaic, folder_with_mosaic_name[:-1]+"_masked_mosaic.tif")
+    masked_mosaic_path = os.path.join(folder_with_mosaic, masked_product_name+"_masked_stack_unet")
     if folder_with_mosaic_name[:-1] == "sc_map":
         dtype = gdal.GDT_Byte
+        masked_mosaic_path = masked_mosaic_path + "-scmap.tif"
     else:
         dtype = gdal.GDT_Float32
+        masked_mosaic_path = masked_mosaic_path + "-probamap.tif"
     masked_mosaic = driver.Create(masked_mosaic_path, mosaic_size[0], mosaic_size[1], 1, eType=dtype)
     masked_mosaic.SetProjection(mosaic.GetProjectionRef())
     masked_mosaic.SetGeoTransform(mosaic.GetGeoTransform())
