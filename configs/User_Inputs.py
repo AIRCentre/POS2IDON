@@ -7,7 +7,7 @@ Credentials must be modified in the hidden .env file.
 @author: AIR Centre
 """
 
-# SEARCH PRODUCTS ##########################################################################
+# SEARCH ###################################################################################
 
 # Query Sentinel-2 L1C Products in the services catalogue and creates a list of products 
 # that will be saved inside s2l1c_products_folder.
@@ -23,7 +23,7 @@ search = True
 # "CDSE" (Copernicus Data Space Ecosystem - the new ESA service). Full archive soon!
 # Other inputs besides string will stop the pré-start.
 # Other strings will be considered as "CDSE".
-service = "CDSE"
+service = "GC"
 
 # Search service options:
 # Other inputs besides dictionary with correct values will stop the pré-start.
@@ -57,42 +57,47 @@ nrt_sensing_period = False
 # Other inputs besides tuple with correct values will stop the pré-start.
 sensing_period = ('20200917', '20200919')
 
-# STREAM PROCESSING ########################################################################
+# PROCESSING ###############################################################################
 
-# Includes stream download, atmospheric correction, masks and classification.
-# URLs file created by SEARCH PRODUCTS must exist.
+# Includes download, atmospheric correction, masks and classification.
+# URLs file created by SEARCH must exist.
 # You can also create a dummy URLs list file named S2L1CProducts_URLs.txt, inside place dummy
 # URLs: dummy/NAMEOFPRODUCT1.SAFE
 #       dummy/NAMEOFPRODUCT2.SAFE
-# The STREAM PROCESSING needs to have S2L1C products that correspond to the URLs file, 
+# The PROCESSING needs to have S2L1C products that correspond to the URLs file, 
 # even if you have already atmospheric corrected products.
 # Other inputs besides bool will stop the pré-start.
-stream_processing = True
+processing = True
 
 
-# Download is done in stream fashion. Use SEARCH if needed.
-# Download Sentinel-2 L1C Products from the GC or COAH services using URLs file. 
+# Download is done for each url. Use SEARCH if needed.
+# True - Downloads Sentinel-2 L1C products from the services using URLs file. 
+# False - Does not download products, it assumes you downloaded already.
 # Other inputs besides bool will stop the pré-start.
 download = True
 
 
 # Atmospheric correction of Sentinel-2 L1C Products using ACOLITE. 
-# s2l1c_products_folder must exist with data.
+# True - AC products inside s2l1c_products_folder.
+# False - Does not AC products, it assumes they exist already.
 # Other inputs besides bool will stop the pré-start.
-# Outputs are Surface_Reflectance_Bands (BOA), Top_Atmosphere_Bands (TOA) and Reyleigh Corrected Reflectances stored in the stack raster file.
 atmospheric_correction = True
 
 
 # Apply masks to the atmospheric corrected product.
-# ac_products_folder must exist and have data.
+# True - Creates masks that are applied or will be applied (UNet) to AC products inside ac_products_folder.
+# False - Assumes you have already the masks. Note: This does not mean that application of masks will be ignored.
 # Other inputs besides bool will stop the pré-start.
 masking = True
 
 # Masking options.
 # Other inputs besides dictionary with correct values will stop the pré-start.
+# Ignore application of masks (classify entire image) by:
+# "use_existing_ESAwc": True and leave 2-1_ESA_Worldcover folder empty.
+# "features_mask": None
+# "cloud_mask": False
                    # Use existing ESA WorldCover Tiles that are inside 2-1_ESA_Worldcover to create water mask.
                    # If False, it will download the tiles.
-                   # Ignore water mask by using option True, and leave empty the 2-1_ESA_Worldcover folder.
 masking_options = {"use_existing_ESAwc": False,  
                    # Buffer size applied to land, 0 to ignore.
                    "land_buffer": 0,
@@ -114,7 +119,8 @@ masking_options = {"use_existing_ESAwc": False,
 
 
 # Perform classification on masked products.
-# masked_products_folder must exist and have data.
+# True - Classification using data from masked_products_folder.
+# False - Ignores classification.
 # Other inputs besides bool will stop the pré-start.
 classification = True
 
@@ -122,13 +128,14 @@ classification = True
 # Other inputs besides dictionary with correct values will stop the pré-start.                       
                           # Split full image into 256x256 patches and consider each one during classification.
                           # Mosaic all patches into single image after classification.
-classification_options = {"split_and_mosaic": False,
+classification_options = {"split_and_mosaic": True,
                           # Outputs TIF file with the class probability for each pixel.
                           "classification_probabilities": False,
                           # Machine Learning algorithm:
                           # "rf" for Random Forest. 
                           # "xgb" for XGBoost. 
-                          # "unet" for Unet. This model needs split_and_mosaic option True.
+                          # "unet" for Unet. This model needs split_and_mosaic option True. 
+                          # Unet Julia is recognized by the model extension .bson  
                           "ml_algorithm": "rf",
                           # Path to the folder containing the machine learning model.
                           "model_path": "configs/MLmodels/RF_Model_Example_MARIDA",
@@ -138,10 +145,10 @@ classification_options = {"split_and_mosaic": False,
                           # "GPUpt" for model converted to pytorch and processed on GPU. Max size of model limited by GPU memory.
                           # None for Unet models.
                           "model_type": "sk",
-                          # Number of classification classes. 6 or 11. Change when changing model.
+                          # Number of classification classes. Change when changing model.
                           "n_classes": 11,
                           # Tuple of features to consider, must match the ones used during model train. Change when changing model.
-                          # Features available are ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI') or ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FDI', 'NDWI', 'NDMI')
+                          # Features available are ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI') or ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12')
                           # For Unet use only the 11 bands as features
                           "features": ('B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12', 'NDVI', 'FAI', 'FDI', 'SI', 'NDWI', 'NRD', 'NDMI', 'BSI'),
                           # Only used for Unet models. Number of hidden channels.
