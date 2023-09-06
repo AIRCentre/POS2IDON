@@ -20,9 +20,10 @@ from hummingbird.ml import load
 import torch
 import torchvision.transforms as transforms
 import time
-#from julia import Main as jl
+# Comment if Julia is giving you problems
+from juliacall import Main as jl
 
-### unet.py ############################################################################################################
+### Import Defined Functions ###########################################################################################
 from modules.unet import UNet
 from modules.PreStart import ScriptOutput2List
 from modules.Auxiliar import CreateBrandNewFolder
@@ -37,37 +38,53 @@ def load_ml_model(model_folder, classification_options):
         model_path = glob.glob(os.path.join(model_folder, "*.zip"))[0]
         model = load(model_path)
         device = None
+        mean_bands = None
+        std_bands = None
     
     elif (classification_options["model_type"] == "GPUpt") and (classification_options["ml_algorithm"] != "unet"): 
         model_path = glob.glob(os.path.join(model_folder, "*.zip"))[0]
         model = load(model_path)
         model.to('cuda')
         device = None
+        mean_bands = None
+        std_bands = None
     
     elif (classification_options["model_type"] == "sk") and (classification_options["ml_algorithm"] != "unet"): 
         model_path = glob.glob(os.path.join(model_folder, "*.pkl"))[0]
         model = pkl.load(open(model_path, 'rb'))
         device = None
+        mean_bands = None
+        std_bands = None
     
     else: # UNET
-        # Use gpu or cpu
-        if torch.cuda.is_available():
-            device = torch.device("cuda")
+        # Split unet type by file extension
+        # Julia
+        if len(glob.glob(os.path.join(model_folder, "*.bson"))) != 0:
+            # import julia functions
+            jl.include("modules/Classification.jl")
+            device, model, mean_bands, std_bands = jl.Load_Julia_Model(model_folder)
+        # Python
         else:
-            device = torch.device("cpu")
-        # Model structure
-        model = UNet(len(classification_options["features"]), classification_options["n_classes"], classification_options["n_hchannels"])
-        model.to(device)
-        # Load model from specific epoch to continue the training or start the evaluation
-        model_path = glob.glob(os.path.join(model_folder, "*.pth"))[0]
-        checkpoint = torch.load(model_path, map_location=device)
-        model.load_state_dict(checkpoint)
-        del checkpoint  # dereference
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        model.eval()
+            # Use gpu or cpu
+            if torch.cuda.is_available():
+                device = torch.device("cuda")
+            else:
+                device = torch.device("cpu")
+            # Model structure
+            model = UNet(len(classification_options["features"]), classification_options["n_classes"], classification_options["n_hchannels"])
+            model.to(device)
+            # Load model from specific epoch to continue the training or start the evaluation
+            model_path = glob.glob(os.path.join(model_folder, "*.pth"))[0]
+            checkpoint = torch.load(model_path, map_location=device)
+            model.load_state_dict(checkpoint)
+            del checkpoint  # dereference
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            model.eval()
+            mean_bands = None
+            std_bands = None
 
-    return model, device
+    return model, device, mean_bands, std_bands
 
 ########################################################################################################################
 def convert_stack_rfxgb(image, classification_options):
@@ -270,6 +287,51 @@ def unet_prediction(device, model, output_folder, image_name, img, meta, tags, d
             dst.update_tags(**tags)
 
 ########################################################################################################################
+def unet_prediction_julia(device, model, mean_bands, std_bands, output_folder, image_name, img, meta, tags, dtype, classification_options):
+    """
+    This function uses Unet to predict one or more images in Julia.
+    """
+    # sc_maps folder
+    scmaps_folder = os.path.join(output_folder, "sc_maps")
+    # Output file path
+    scmap_path = os.path.join(scmaps_folder, image_name+"_unet-scmap.tif")
+    model_folder = classification_options["model_path"]
+
+    # proba_maps folder
+    if classification_options["classification_probabilities"] == True:
+        probamaps_folder = os.path.join(output_folder, "proba_maps") 
+        probamap_path = os.path.join(probamaps_folder, image_name+"_unet-probamap.tif")
+    
+    # Preprocessing before prediction
+    impute_nan = np.tile(classification_options["features_mean"], (256,256,1))
+    nan_mask = np.isnan(img)
+    img[nan_mask] = impute_nan[nan_mask]
+
+    # Update meta to reflect the number of layers
+    meta.update(count = 1)
+    logits = jl.Classification_Julia(device, img, model, mean_bands, std_bands)
+    logits = np.asarray(logits)
+    # Convert the array to a PyTorch tensor
+    logits = torch.tensor(logits)
+    probs = torch.nn.functional.softmax(logits.detach(), dim=1).cpu().numpy()
+
+    if classification_options["classification_probabilities"] == True:
+        probs_i = probs.max(axis=1).squeeze()
+        probs = probs.argmax(1).squeeze()+1
+        # Write TIFs
+        with rio.open(scmap_path, 'w', **meta) as dst:
+            dst.write_band(1, probs.astype(dtype).copy())
+            dst.update_tags(**tags)
+        with rio.open(probamap_path, 'w', **meta) as dst:
+            dst.write_band(1, probs_i.copy())
+            dst.update_tags(**tags)
+    else:
+        probs = probs.argmax(1).squeeze()+1
+        # Write TIF
+        with rio.open(scmap_path, 'w', **meta) as dst:
+            dst.write_band(1, probs.astype(dtype).copy())
+            dst.update_tags(**tags)
+########################################################################################################################
 def create_sc_proba_maps(input_folder, output_folder, classification_options):
     """
     This function uses a Machine Learning Algorithm (Random Forest, XGBoost or Unet) to predict one image or several
@@ -306,7 +368,7 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
 
     # Load model, must be done outside loop to save time
     ScriptOutput2List("Loading ML model...", log_list)
-    model, device = load_ml_model(classification_options["model_path"], classification_options)
+    model, device, mean_bands, std_bands = load_ml_model(classification_options["model_path"], classification_options)
     ScriptOutput2List("Model loaded.\n", log_list)
 
     # Check folder TIFs
@@ -341,15 +403,26 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
 
     # Unet
     elif classification_options["ml_algorithm"] == "unet":
-        ScriptOutput2List("Performing classification with Unet...", log_list)
-        # Cycle each TIF
-        for image in tifs_list:
-            image_name = os.path.basename(image)[:-4]
-            # Prepare data to predict
-            img, meta, tags, dtype = convert_stack_unet(image, classification_options)
-            # Prediction
-            unet_prediction(device, model, output_folder, image_name, img, meta, tags, dtype, classification_options)
-    
+        # Julia
+        if len(glob.glob(os.path.join(classification_options["model_path"], "*.bson"))) != 0:
+            ScriptOutput2List("Performing classification with Julia Unet...", log_list)
+            # Cycle each TIF
+            for image in tifs_list:
+                image_name = os.path.basename(image)[:-4]
+                # Prepare data to predict
+                img, meta, tags, dtype = convert_stack_unet(image, classification_options)
+                # Prediction
+                unet_prediction_julia(device, model, mean_bands, std_bands, output_folder, image_name, img, meta, tags, dtype, classification_options)
+        # Python
+        else: 
+            ScriptOutput2List("Performing classification with Unet...", log_list)
+            # Cycle each TIF
+            for image in tifs_list:
+                image_name = os.path.basename(image)[:-4]
+                # Prepare data to predict
+                img, meta, tags, dtype = convert_stack_unet(image, classification_options)
+                # Prediction
+                unet_prediction(device, model, output_folder, image_name, img, meta, tags, dtype, classification_options)      
     # Other
     else:
         ScriptOutput2List("Machine Learning algorithm option not defined.", log_list)
@@ -359,99 +432,6 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
     ScriptOutput2List("Done. Classification time with all steps: " + str(ptime) + " seconds.\n", log_list)
 
     return log_list  
-
-########################################################################################################################################
-# CHECK THIS
-def CreateSCmap_Julia(SelectBandsIndices, FolderWithBandsAndIndices,OutputFolder, ModelFolderPath,RF_model_jl):
-    """
-    This function creates a dataframe based on bands and indices to be predicted with Julia by the ML model. The prediction creates a Scene Classification map.
-    The prediction can be performed on CPU or GPU.
-    Map with the probability of predicted class can also be created.
-    Input:  SelectBandsIndices - List of features (bands and indices). Must match the same features used in the training of the model.
-            FolderWithBandsAndIndices - Folder path where the tif bands and indices are saved. The dataframe will be created based on that data. 
-                                        The SC map will be saved on that same folder.
-            ModelFolderPath - Path to folder where julia trained model (.jl2d) is saved.
-            Julia Model to be used - String (inside function)
-            OutputClassProba - Outputs a .tif file with class probability for each pixel predicted by the model
-    Output: LogList - Function's log outputs. List of strings. 
-            Scene Classification map as tif.
-    """
-    LogList = []
-
-    # Import bands and indices paths, stack them into dataframe
-    # Init
-    # File path
-    FileName = SelectBandsIndices[0]+'.tif'
-    FilePath = glob.glob(os.path.join(FolderWithBandsAndIndices, FileName))[0]
-    # Get data
-    Raster = gdal.Open(FilePath)
-    RasterData = Raster.GetRasterBand(1).ReadAsArray()
-    # Reshape as single column
-    StackedRasterData = RasterData.reshape(-1,1)
-
-    for FileBasename in SelectBandsIndices[1:]:
-        # File path
-        FileName = FileBasename+'.tif'
-        FilePath = glob.glob(os.path.join(FolderWithBandsAndIndices, FileName))[0]
-        # Get data
-        Raster = gdal.Open(FilePath)
-        RasterData = Raster.GetRasterBand(1).ReadAsArray()
-        RasterDataReshaped = RasterData.reshape(-1,1)
-        StackedRasterData = np.concatenate([StackedRasterData, RasterDataReshaped], axis=1)
-
-    # Shape to use in reshape
-    RasterDataShape = RasterData.shape
-    # Global dataframe to predict
-    DFtoPredict = pd.DataFrame(StackedRasterData, columns=SelectBandsIndices)
-    
-    # Structure of zero dataframe to store results
-    # Classification
-    DFofClassiResultsStruct = pd.DataFrame(0, index=range(0, len(DFtoPredict.index)), columns=['ClassNum'])
-    
-    # Dataframe to predict, without NaNs
-    DFtoPredictWithoutNaN = DFtoPredict.dropna(axis=0, how='any')
-
-    # If dataframe to predict without NaNs is empty, then the final classification  is only 0 (the same for probabilities).
-    # A calculation between available data for prediction (without NaNs) and total data can be done here to only consider a percentage of more than 80% 
-    if len(DFtoPredictWithoutNaN.index) == 0:
-        OutputLog = "Classification ignored, no dataframe without NaNs to predict."
-        LogList.append(OutputLog)
-        print(OutputLog)
-        ClassiResultsFlat = np.array(DFofClassiResultsStruct).flatten()
-        ClassiResultsReshape = ClassiResultsFlat.reshape(RasterDataShape)
-    else:
-        OutputLog = "Performing classification for dataframe with no NaNs of shape " + str(DFtoPredictWithoutNaN.shape) + "."
-        LogList.append(OutputLog)
-        print(OutputLog)
-        
-        # Call Julia script where the function is included
-        jl.include("Functions/Classification.jl")
-        # Call Julia Function
-        ClassiResults,dt = jl.Classification_Julia(ModelFolderPath,DFtoPredictWithoutNaN,RF_model_jl)
-        OutputLog = "Classification Time: " + str(round(dt)) + " seconds."
-        LogList.append(OutputLog)
-        print(OutputLog)
-        # Index results, construct final dataframe and reshape
-        ClassiResultsIndexed = pd.DataFrame(ClassiResults, index=DFtoPredictWithoutNaN.index, columns=['ClassNum'])
-        DFofClassiResults = ClassiResultsIndexed.combine_first(DFofClassiResultsStruct)
-        ClassiResultsFlat = np.array(DFofClassiResults).flatten()
-        ClassiResultsReshape = ClassiResultsFlat.reshape(RasterDataShape)
-        
-    # Initiate raster and save scene classification results to folder
-    Driver = gdal.GetDriverByName("GTiff")
-    SCraster = Driver.Create(os.path.join(OutputFolder,"SCmap.tif"), Raster.RasterXSize, Raster.RasterYSize, 1, gdal.GDT_Byte)
-    SCraster.SetProjection(Raster.GetProjectionRef())
-    SCraster.SetGeoTransform(Raster.GetGeoTransform())
-    SCrasterBand = SCraster.GetRasterBand(1)
-    SCrasterBand.WriteArray(ClassiResultsReshape)
-    SCraster = None
-
-    return LogList
-
-########################################################################################################################################
-
-
-
 
 
 

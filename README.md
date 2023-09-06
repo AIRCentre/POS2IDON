@@ -3,16 +3,16 @@ Pipeline for Ocean Features Detection with Sentinel-2.
 
 ## Objective 
 
-The objective of this work is to foster the development of a tool for monitoring ocean features, particularly floating plastic accumulations, using Sentinel-2 satellite imagery. By providing the source code, the vision is to provide a transparent easy-to-examine code that can be decomposed in several modules, and in this way stimulate improvements and new implementations from the scientific community to reach the ultimate goal of tracking floating plastic in an operational manner from satellite data. 
+The objective of this work is to foster the development of a tool for monitoring ocean features, particularly floating plastic accumulations, using Sentinel-2 satellite imagery. By providing the source code, the vision is to share a transparent easy-to-examine code that can be decomposed in several modules, and in this way stimulate improvements and new implementations from the scientific community to reach the ultimate goal of tracking floating plastic in an operational manner from satellite data. 
 
 ## Workflow
 In this repository we propose an open-policy data pipeline framework for ocean features detection (e.g. floating plastic patches, foam, floating macroalgae, turbid water and clear water) using Sentinel-2 satellite imagery and machine learning methods. The presented workflow consists of three main steps:
 
 1) search and download Level-1C Sentinel-2 imagery from [Copernicus Open Access Hub](https://scihub.copernicus.eu/), [Google Cloud Storage](https://cloud.google.com/storage/docs/public-datasets/sentinel-2) or the new [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu) for a given region of interest and specified time period.
 
-2) image pre-processing: application of [ACOLITE](https://github.com/acolite/acolite.git/) atmospheric correction module to obtain Rayleigh-corrected reflectances and surface reflectances, application of a land mask based on [ESA World Cover 2021](https://worldcover2021.esa.int/), application of a cloud mask computed with [Sentinel Hub's cloud detector for Sentinel-2 imagery](https://github.com/sentinel-hub/sentinel2-cloud-detector), application of “marine clear water” mask (NDWI-based, or a NIR-reflectance based thresholding).
+2) image pre-processing: application of [ACOLITE](https://github.com/acolite/acolite.git/) atmospheric correction module to obtain Rayleigh-corrected reflectances and surface reflectances, application of a land mask based on [ESA World Cover 2021](https://worldcover2021.esa.int/), application of a cloud mask computed with [Sentinel Hub's cloud detector for Sentinel-2 imagery](https://github.com/sentinel-hub/sentinel2-cloud-detector), application of “marine clear water” mask (NDWI-based, or a NIR-reflectance based thresholding) and NaN mask.
 
-3) pixel-based classification with machine learning methods on the downloaded set of Sentinel-2 images. The workflow supports three well-known machine learning algorithms (Random Forest, XGBoost and Unet) trained with spectral signatures, as well as spectral indices (e.g., NDVI - Normalized Difference Vegetation Index, FAI - Floating Algae Index, FDI - Floating Debris Index). As additional option, the classification step using Random Forest trained models, can be computed also with Julia programming language. Outputs include the classification maps and classification probability maps, for the chosen region and time period. For large regions of interest, one has the option to split the image for classification and then mosaic.
+3) pixel-based classification with machine learning methods on the downloaded set of Sentinel-2 images. The workflow supports three well-known machine learning algorithms (Random Forest, XGBoost and Unet) trained with spectral signatures, as well as spectral indices (e.g., NDVI - Normalized Difference Vegetation Index, FAI - Floating Algae Index, FDI - Floating Debris Index). As additional option, the classification step using Unet, can be computed also with Julia programming language. Outputs include the classification maps and classification probability maps, for the chosen region and time period. For large regions of interest, one has the option to split the image for classification and then mosaic.
 
 ## Dependencies
 ### Python
@@ -32,23 +32,20 @@ and install libraries in the following order(can take up to 5 minutes):
 ```
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 s2cloudless==1.7.0
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==13.0.0
 ```
 (Windows):
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 julia==0.6.0 xgboost==1.7.3 s2cloudless==1.7.0
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==13.0.0
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
 
 
 Tested with Conda version 4.12.0 and Pip version 23.0.1.
 
-### Julia (testing phase - can be ignored)
-To run the classification step using [Julia programming language](https://julialang.org/downloads/) is necessary to install locally a version julia (1.8.3 tested) with the following packages:
-[DataFrames.jl](https://github.com/JuliaData/DataFrames.jl), [DecisionTree.jl](https://github.com/JuliaAI/DecisionTree.jl) ,[JLD2.jl](https://github.com/JuliaIO/JLD2.jl),[Pandas.jl](https://github.com/JuliaPy/Pandas.jl) [PyCall](https://github.com/JuliaPy/PyCall.jl).
-
-This has been tested successfully on Windows (11) machine in VSCode. The Julia function is contained in `modules/Classification.jl` and is called using [PyJulia](https://github.com/JuliaPy/pyjulia) as python interface to julia. To correctly set-up the interfacing of Python with Julia this [link](https://syl1.gitbook.io/julia-language-a-concise-tutorial/language-core/interfacing-julia-with-other-languages) can be useful.
+### Notes about Julia processing
+To run the Unet classification step using [Julia programming language](https://julialang.org/downloads/) Julicall should be enough. We recommend a dedicated GPU. Please contact us if you are interested in testing the Julia Unet model (format .bson).
 
 ## Configurations
 
@@ -62,9 +59,10 @@ This has been tested successfully on Windows (11) machine in VSCode. The Julia f
     and type them in the file `configs/Environments/.env`
 
 - Place your saved Machine Learning models in :\
-    `configs/MLmodels/YourModelFolder/YourModel.pkl` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for scikit-learn)\
+    `configs/MLmodels/YourModelFolder/YourModel.pkl` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for scikit-learn RF and XGB)\
     `configs/MLmodels/YourModelFolder/YourModel.zip` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for Py-Torch)\
-    `configs/MLmodels/YourModelFolder/YourModel.jld2`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for Julia Language models)
+    `configs/MLmodels/YourModelFolder/YourModel.pth` &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for Python Unet)\
+    `configs/MLmodels/YourModelFolder/YourModel.bson`&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(for Julia Unet)
     
 - Execute the script `workflow.py`, this will automatically clone the following repositories:
 

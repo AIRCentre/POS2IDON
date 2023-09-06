@@ -11,6 +11,8 @@ import os
 import shutil
 import glob
 from datetime import datetime, timedelta
+from osgeo import gdal
+import pandas as pd
 
 ############################################################################################
 def check_folder(folder_name):
@@ -211,6 +213,30 @@ def filter_safe_products(urls_list, filter):
         urls_list_filtered = urls_list.copy()
 
     return urls_list_filtered, urls_list_ignored
+
+#################################################################################################
+def raster_to_feather(input_path):
+    """
+    This function converts a GeoTIF raster to a feather file with X, Y, Value.
+    Inputs: input_path - Path to the GeoTIF file as string.
+    Output: Feather file with same name as input file.
+    """
+    folder_path = os.path.dirname(input_path)
+    input_name = os.path.basename(input_path)[:-4]
+
+    # Convert GeoTIFF to XYZ format
+    raster = gdal.Open(input_path)
+    xyz_path = os.path.join(folder_path, input_name+".xyz")
+    xyz = gdal.Translate(xyz_path, raster)
+    raster = None
+    xyz = None
+
+    # Convert XYZ to Feather and delete it
+    xyz_df = pd.read_csv(xyz_path, sep=" ", header=None)
+    xyz_df.columns = ["X", "Y", "Value"]
+    feather_path = os.path.join(folder_path, input_name+".feather")
+    xyz_df.to_feather(feather_path)
+    os.remove(xyz_path)
 
 
         

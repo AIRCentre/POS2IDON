@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.9
 # -*- coding: utf-8 -*-
+
 """
 Main POS2IDON script.
 
@@ -26,6 +27,23 @@ try:
 except Exception as e:
     print(str(e) + '\n')
     pre_start_functions_flag = 0
+
+# Julia packages - Install manually inside the juliacall environemnt
+# pos2idon-env -> julia_env -> open terminal -> Julia REPL -> enter Pkg ] -> activate . -> add Package
+try:
+    print("Importing Julia packages...")
+    print("All packages must be installed in the juliacall environment.")
+    from juliacall import Main as jl
+    jl.seval("using Flux")
+    jl.seval("using BSON")
+    jl.seval("using Glob")
+    jl.seval("using Base.Threads")
+    jl.seval("using CUDA")
+    print("Done.\n")
+    julia_packages_flag = 1
+except Exception as e:
+    print(str(e) + '\n')
+    julia_packages_flag = 0
 
 # Clone important modules from GitHub (FeLS and ACOLITE)
 try:
@@ -101,7 +119,7 @@ except Exception as e:
     print(str(e) + "\n")
     credentials_flag = 0
 
-pre_start_flag = pre_start_functions_flag * clone_flag * \
+pre_start_flag = julia_packages_flag * pre_start_functions_flag * clone_flag * \
     libraries_flag * modules_flag * inputs_flag * credentials_flag
 ############################################################################################ 
 if pre_start_flag == 1:
@@ -135,10 +153,10 @@ if pre_start_flag == 1:
     else:
         ScriptOutput2List("Search of products ignored.\n", log_list)
 
-    # STREAM PROCESSING ####################################################################
-    ScriptOutput2List("STREAM PROCESSING", log_list)
+    # PROCESSING ###########################################################################
+    ScriptOutput2List("PROCESSING", log_list)
     urls_file = os.path.join(s2l1c_products_folder, "S2L1CProducts_URLs.txt")
-    if (stream_processing == True) and os.path.isfile(urls_file):
+    if (processing == True) and os.path.isfile(urls_file):
         # Read S2L1CProducts_URLs.txt file        
         urls_list = open(urls_file).read().splitlines()
         if len(urls_list) == 0:
@@ -377,6 +395,7 @@ if pre_start_flag == 1:
                             with open(os.path.join(masked_product, "Info.txt")) as text_file:
                                 safe_file_name = text_file.read()
                             masked_product_name = os.path.basename(masked_product)
+                            masked_file_name = os.path.basename(glob.glob(os.path.join(masked_product, "*.tif"))[0])[:-4]
                             ScriptOutput2List("Classification: " + safe_file_name + " (" + masked_product_name + ")\n", log_list)
 
                             # -> Split
@@ -400,19 +419,29 @@ if pre_start_flag == 1:
                             if classification_options["split_and_mosaic"] == True:
                                 ScriptOutput2List("Performing mosaic of patches...", log_list) 
                                 sc_maps_folder = os.path.join(classification_product, "sc_maps")
-                                mosaic_patches(sc_maps_folder, sc_maps_folder, "sc_map_mosaic")
-                                if (classification_options["ml_algorithm"] == "unet") and (masking == True):
+                                if (classification_options["ml_algorithm"] == "unet"):
+                                    final_mosaic_name = masked_product_name + "_stack_unet-scmap_mosaic"
+                                    mosaic_patches(sc_maps_folder, sc_maps_folder, final_mosaic_name)
                                     # Apply later mask to Unet mosaic
+                                    ScriptOutput2List("Creating Nan mask...", log_list)
+                                    Create_Nan_Mask(ac_product, masks_folder)
                                     mask_stack_later(sc_maps_folder, masked_product, filter_ignore_value=0)
                                     ScriptOutput2List("Final mask applied to Unet mosaic (sc_map).", log_list)
+                                else:
+                                    final_mosaic_name = masked_file_name + "_" + classification_options["ml_algorithm"] + "-"
+                                    mosaic_patches(sc_maps_folder, sc_maps_folder, final_mosaic_name+"scmap")
 
                                 if classification_options["classification_probabilities"] == True:
                                     proba_maps_folder = os.path.join(classification_product, "proba_maps")
-                                    mosaic_patches(proba_maps_folder, proba_maps_folder, "proba_map_mosaic")
-                                    if (classification_options["ml_algorithm"] == "unet") and (masking == True):
+                                    if (classification_options["ml_algorithm"] == "unet"):
+                                        final_mosaic_name = masked_product_name + "_stack_unet-probamap_mosaic"
+                                        mosaic_patches(proba_maps_folder, proba_maps_folder, final_mosaic_name)
                                         # Apply later mask to Unet mosaic
                                         mask_stack_later(proba_maps_folder, masked_product, filter_ignore_value=0)
                                         ScriptOutput2List("Final mask applied to Unet mosaic (proba_map).", log_list)
+                                    else:
+                                        final_mosaic_name = masked_file_name + "_" + classification_options["ml_algorithm"] + "-"
+                                        mosaic_patches(proba_maps_folder, proba_maps_folder, final_mosaic_name+"probamap")
 
                                 ScriptOutput2List("Done.\n", log_list)
                             else: 
@@ -424,6 +453,10 @@ if pre_start_flag == 1:
                             shutil.copy(info_file_in, info_file_out)
                         else:
                             ScriptOutput2List("There is no masked product to apply classification.\n", log_list)
+                        
+                        # Convert final classification map to feather
+                        raster_to_feather(os.path.join(classification_product, "sc_maps", masked_file_name + "_" + classification_options["ml_algorithm"] + "-scmap.tif"))
+                        ScriptOutput2List("SC map converted to feather.\n", log_list)
                     else:
                         ScriptOutput2List("Classification of products ignored.\n", log_list)
                 except Exception as e:
@@ -485,7 +518,7 @@ if pre_start_flag == 1:
                 ScriptOutput2List(excluded_products_corrupted, log_list)
 
     else:
-        ScriptOutput2List("Stream Processing ignored.\n", log_list)
+        ScriptOutput2List("Processing ignored.\n", log_list)
 
 else:
     print("Failed to pré-start script.\n")
