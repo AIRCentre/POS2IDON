@@ -49,7 +49,7 @@ To run the Unet classification step using [Julia programming language](https://j
 
 1- Locate your POS2IDON `julia_env` folder, usually it is inside `pos2idon-env` folder or the base Julia folder.
 
-2- Open a terminal inside the `julia_env` folder, activate the POS2IDON environemnt and start Python.
+2- Open a terminal inside the `julia_env` folder, activate the POS2IDON environment and start Python.
 
 3- Write: 
 ```
