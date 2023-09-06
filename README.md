@@ -44,8 +44,27 @@ conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 
 Tested with Conda version 4.12.0 and Pip version 23.0.1.
 
-### Notes about Julia processing
-To run the Unet classification step using [Julia programming language](https://julialang.org/downloads/) Julicall should be enough. We recommend a dedicated GPU. Please contact us if you are interested in testing the Julia Unet model (format .bson).
+### Julia
+To run the Unet classification step using [Julia programming language](https://julialang.org/downloads/), `julicall` will install the latest Julia version and you just need to do the following:
+
+1- Locate your POS2IDON `julia_env` folder, usually it is inside `pos2idon-env` folder or the base Julia folder.
+
+2- Open a terminal inside the `julia_env` folder, activate the POS2IDON environemnt and start Python.
+
+3- Write: 
+```
+from julicall import Main as jl
+jl.seval("import Pkg")
+jl.seval('Pkg.activate("PATH-TO-julia_env")')
+jl.seval(Pkg.add("Flux"))
+jl.seval(Pkg.add("BSON"))
+jl.seval(Pkg.add("Glob"))
+jl.seval(Pkg.add("CUDA"))
+```  
+
+You only need to to this the first time you run POS2IDON.
+
+We recommend a dedicated GPU. Please contact us if you are interested in testing the Julia Unet model (format .bson).
 
 ## Configurations
 
