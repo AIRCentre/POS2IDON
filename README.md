@@ -16,23 +16,20 @@ In this repository we propose an open-policy data pipeline framework for ocean f
 
 ## Dependencies
 ### Python
-POS2IDON is coded in Python 3.9. In the terminal, create a Python environment using [conda](https://www.anaconda.com):
+POS2IDON is coded in Python 3.9. In the terminal, create a Python environment using [conda](https://www.anaconda.com), activate it:
 ```
 conda create -n pos2idon-env python=3.9
-```
-
-activate it:
-```
 conda activate pos2idon-env
 ```
 
-and install libraries in the following order(can take up to 5 minutes):
+and install libraries in the following order:
 
 (macOS Ventura):
 ```
+# Takes approx. 8-15 minutes (☕ time!)
+conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 s2cloudless=1.7.0 lightgbm=3.3.2 
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==13.0.0
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
-conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==13.0.0
 ```
 (Windows):
 ```
@@ -53,13 +50,13 @@ To run the Unet classification step using [Julia programming language](https://j
 
 3- Write: 
 ```
-from julicall import Main as jl
+from juliacall import Main as jl
 jl.seval("import Pkg")
-jl.seval('Pkg.activate("PATH-TO-julia_env")')
-jl.seval(Pkg.add("Flux"))
-jl.seval(Pkg.add("BSON"))
-jl.seval(Pkg.add("Glob"))
-jl.seval(Pkg.add("CUDA"))
+jl.seval('Pkg.activate("FULL-PATH-TO-julia_env")')
+jl.seval('Pkg.add("Flux")')
+jl.seval('Pkg.add("BSON")')
+jl.seval('Pkg.add("Glob")')
+jl.seval('Pkg.add("CUDA")')
 ```  
 
 You only need to to this the first time you run POS2IDON.
