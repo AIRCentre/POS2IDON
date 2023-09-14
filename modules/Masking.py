@@ -14,8 +14,8 @@ from scipy import ndimage
 from s2cloudless import S2PixelCloudDetector
 import numpy as np
 import rasterio
-from xml.dom import minidom
-from rasterio.warp import reproject, Resampling
+#from xml.dom import minidom
+#from rasterio.warp import reproject, Resampling
 from scipy.ndimage import minimum_filter
 
 # Import other Functions ##########################################################################################################
@@ -335,7 +335,7 @@ def CloudMasking_S2CloudLess_ROI_10m(ac_product_folder, MaskingProductFolder, S2
     Bands = np.array([np.dstack(ListofBandsArray)])
     # Apply s2cloudless algorithm
     Cloud_Detector = S2PixelCloudDetector(threshold=S2CL_Threshold, average_over=S2CL_Average, dilation_size=S2CL_Dilation) # To process on all 13 bands add: all_bands=True
-    Cloud_Probs = Cloud_Detector.get_cloud_probability_maps(Bands)
+    # Cloud_Probs = Cloud_Detector.get_cloud_probability_maps(Bands)
     Mask = Cloud_Detector.get_cloud_masks(Bands).astype(rasterio.uint8)
     # Write output cloud mask 
     tif_out_image = os.path.join(MaskingProductFolder, ac_product_name+'_CLOUD_Mask_10m.tif')
