@@ -24,39 +24,40 @@ conda activate pos2idon-env
 
 and install libraries in the following order (takes approx. 8-15 minutes):
 
-(macOS Ventura):
+*macOS:*
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 s2cloudless=1.7.0 lightgbm=3.3.2 
 pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==13.0.0
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
-(Windows):
+*Windows*
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
 pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==13.0.0
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
 
-
-Tested with Conda version 4.12.0 and Pip version 23.0.1.
-
 ### Julia
-To run the Unet classification step using [Julia programming language](https://julialang.org/downloads/), `julicall` will install the latest Julia version and you just need to do the following:
 
-1- Locate your POS2IDON `julia_env` folder, usually it is inside `pos2idon-env` folder or the base Julia folder.
+1- To run the Unet classification step using Julia, check if you have Julia installed on your computer. Download [here](https://julialang.org/downloads/);
 
-2- Open a terminal inside the `julia_env` folder, activate the POS2IDON environment and start Python.
+2- Run POS2IDON, the first time you run it `julicall` will install the latest version of Julia;
 
-3- Write: 
+3- Locate your POS2IDON Julia environment, usually it is inside conda envs `pos2idon-env/julia_env` folder (macOS) or the base Julia `environments/pyjuliapkg` folder (Windows);
+
+4- Open a terminal inside one of those folders and type `julia`;
+
+5- Type `]` and write: 
 ```
-from juliacall import Main as jl
-jl.seval("import Pkg")
-jl.seval('Pkg.activate("FULL-PATH-TO-julia_env")')
-jl.seval('Pkg.add("Flux")')
-jl.seval('Pkg.add("BSON")')
-jl.seval('Pkg.add("Glob")')
-jl.seval('Pkg.add("CUDA")')
-```  
+activate .
+add Flux
+add BSON
+add Glob
+add CUDA
+add cuDNN
+``` 
+
+6- Run POS2IDON again.
 
 You only need to to this the first time you run POS2IDON.
 
