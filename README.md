@@ -63,7 +63,7 @@ You only need to to this the first time you run POS2IDON.
 
 We recommend a dedicated GPU. Please contact us if you are interested in testing the Julia Unet model (format .bson).
 
-## Configurations
+## Configuration
 
 - Get credentials for the followings data providers:
 
@@ -104,3 +104,12 @@ To test the classification workflow we provide a random forest model based on [M
 
 ![](Example-img.png)
 Visualization with [QGIS](https://qgis.org/en/site/), color palette provided inside `configs/QGIScolorpalettes`.
+
+## Citation
+
+
+If you find POS2IDON useful in your research, please acknowledge us using the following reference:
+
+- A. Valente, E. Castanho, A. Giusti, J. Pinelo and P. Silva, "An Open-Source Data Pipeline Framework to Detect Floating Marine Plastic Litter Using Sentinel-2 Imagery and Machine Learning," IGARSS 2023 - 2023 IEEE International Geoscience and Remote Sensing Symposium, Pasadena, CA, USA, 2023, pp. 4108-4111, doi: [10.1109/IGARSS52108.2023.10281415](https://ieeexplore.ieee.org/document/10281415).
+
+POS2IDON is provided by AIR Centre as an experimental tool, without explicit or implied warranty. Use of the tool is at your own discretion and risk.
