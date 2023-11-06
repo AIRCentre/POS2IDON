@@ -34,11 +34,11 @@ try:
     print("Importing Julia packages...")
     print("All packages must be installed in the juliacall environment.")
     from juliacall import Main as jl
-    jl.seval("using Flux")
-    jl.seval("using BSON")
-    jl.seval("using Glob")
+    jl.seval("using Flux") #add
+    jl.seval("using BSON") #add
+    jl.seval("using Glob") #add
     jl.seval("using Base.Threads")
-    jl.seval("using CUDA")
+    jl.seval("using CUDA") #add
     print("Done.\n")
     julia_packages_flag = 1
 except Exception as e:
