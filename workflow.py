@@ -424,6 +424,7 @@ if pre_start_flag == 1:
                                     mosaic_patches(sc_maps_folder, sc_maps_folder, final_mosaic_name)
                                     # Apply later mask to Unet mosaic
                                     ScriptOutput2List("Creating Nan mask...", log_list)
+                                    masks_folder = os.path.join(masked_product, "Masks")
                                     Create_Nan_Mask(ac_product, masks_folder)
                                     mask_stack_later(sc_maps_folder, masked_product, filter_ignore_value=0)
                                     ScriptOutput2List("Final mask applied to Unet mosaic (sc_map).", log_list)
