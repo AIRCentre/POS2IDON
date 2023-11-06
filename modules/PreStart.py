@@ -10,6 +10,7 @@ Pré-Start Functions.
 import os
 import zipfile
 import requests
+import glob
 
 #################################################################################################
 def input_checker():
@@ -231,23 +232,29 @@ def git_clone_acolite_fels(save_dir):
     Output: Modules extracted on folder.
     """
     # ZIP urls
-    acolite_zip_url = "https://github.com/acolite/acolite/archive/master.zip"
+    acolite_zip_url = "https://github.com/acolite/acolite/archive/refs/tags/20231023.0.zip"
     acolite_name = "acolite-main"
     fels_zip_url = "https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud/archive/master.zip"
     fels_name = "fetchLandsatSentinelFromGoogleCloud-master"
 
-    # Download and unzip ACOLITE
     acolite_path = os.path.join(save_dir, acolite_name)
     if not os.path.exists(acolite_path):
         print("\nCloning ACOLITE from GitHub...")
         try:
+            # Download
             acolite_r = requests.get(acolite_zip_url)
             with open(acolite_path+".zip", 'wb') as acolite_f:
                 acolite_f.write(acolite_r.content)
             
+            # Unzip
             with zipfile.ZipFile(acolite_path+".zip") as acolite_zip:
                 acolite_zip.extractall(save_dir)
             os.remove(acolite_path+".zip")
+
+            # Rename from acolite-version to acolite-main
+            acolite_freshly_path = glob.glob(os.path.join(save_dir, "acolite-*"))[0]
+            os.rename(acolite_freshly_path, acolite_path)
+
         except Exception as e:
             print("Unable to clone ACOLITE - " + str(e))
     else:
