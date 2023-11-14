@@ -36,6 +36,13 @@ conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
 pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==13.0.0
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
+*Ubuntu*
+```
+pip install --find-links=https://girder.github.io/large_image_wheels --no-cache GDAL==3.5.0
+pip install geopandas==0.11.1 s2cloudless==1.7.0 pip install lightgbm==3.3.2
+pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==13.0.0
+pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
+```
 
 ### Julia
 
