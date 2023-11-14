@@ -57,11 +57,7 @@ pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
 5- Type `]` and write: 
 ```
 activate .
-add Flux
-add BSON
-add Glob
-add CUDA
-add cuDNN
+add Flux BSON Glob CUDA cuDNN
 ``` 
 
 6- Run POS2IDON again.
