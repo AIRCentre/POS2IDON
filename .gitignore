@@ -9,6 +9,8 @@ configs/*.csv
 configs/*.sqlite
 
 # Ignore folders and files created during process.
+modules/Post_Processing.py
+visualization_cube.py
 0_S2L1C_Products/*
 1_Atmospheric_Corrected_Products/*
 2_Masked_Products/*
