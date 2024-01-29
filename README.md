@@ -2,15 +2,15 @@
 
 Pipeline for Ocean Features Detection with Sentinel-2.
 
-## Objective 
+## Overview 
 
-The objective of this work is to foster the development of a tool for monitoring ocean features, particularly suspected marine debris accumulations, using Sentinel-2 satellite imagery. By providing the source code, the vision is to share a transparent easy-to-examine code that can be decomposed in several modules, and in this way stimulate improvements and new implementations from the scientific community to reach the ultimate goal of tracking floating patches that might contain plastics in an operational manner from satellite data. 
+POS2IDON is a tool to detect suspected locations of floating marine debris, and other ocean features (e.g., floating macroalgae, ships, turbid water), in Sentinel- 2 satellite imagery using Machine Learning. The pipeline includes modules for data acquisition, pre-processing, and pixel-based classification using different ML models (e.g. Random Forest, XGBoost, Unet). Available models were trained with spectral signatures from events available in literature, in particularly from MARIDA library, and show satisfactory metrics. The data pipeline allows to detect large enough features that can be suspicious in terms of aggregation of floating plastic litter and therefore be used to alert and inform stakeholders. POS2IDON outputs include the classification maps for all the available Sentinel-2 imagery of a given region of interest and temporal period, specified by the user. By providing the source code, the vision is to share a transparent easy-to-examine, and flexible, code that is decomposed in several modules, and in this way stimulate improvements and new implementations from the scientific community. 
 
 ## Workflow
 
 In this repository we propose an open-policy data pipeline framework for ocean features detection (e.g. marine debris, floating vegetation, foam and water) using Sentinel-2 satellite imagery and machine learning methods. The presented workflow consists of three main steps:
 
-1) search and download Level-1C Sentinel-2 imagery from [Google Cloud Storage](https://cloud.google.com/storage/docs/public-datasets/sentinel-2), [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu) or [Copernicus Open Access Hub](https://scihub.copernicus.eu/) (discontinued),  for a given region of interest and specified time period.
+1) search and download Level-1C Sentinel-2 imagery from [Google Cloud Storage](https://cloud.google.com/storage/docs/public-datasets/sentinel-2) using [FeLS - Fetch Landsat & Sentinel Data from Google Cloud](https://github.com/vascobnunes/fetchLandsatSentinelFromGoogleCloud.git), [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu) using [CDSETool](https://github.com/SDFIdk/CDSETool.git) or [Copernicus Open Access Hub](https://scihub.copernicus.eu/) using [sentinelsat](https://github.com/sentinelsat/sentinelsat.git) (discontinued),  for a given region of interest and specified time period.
 
 2) image pre-processing: application of [ACOLITE](https://github.com/acolite/acolite.git/) atmospheric correction module to obtain Rayleigh-corrected reflectances and surface reflectances, application of a land mask based on [ESA World Cover 2021](https://worldcover2021.esa.int/), application of a cloud mask computed with [Sentinel Hub's cloud detector for Sentinel-2 imagery](https://github.com/sentinel-hub/sentinel2-cloud-detector), application of “marine clear water” mask (NDWI-based, or a NIR-reflectance based thresholding) and NaN mask.
 
@@ -32,20 +32,20 @@ and install libraries in the following order (takes approx. 8-15 minutes):
 *macOS:*
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 s2cloudless=1.7.0 lightgbm=3.3.2 
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==14.0.1
+pip install python-dotenv==0.20.0 cdsetool==0.1.3 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==14.0.1
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
 *Windows*
 ```
 conda install -c conda-forge gdal=3.5.0 geopandas=0.11.1 lightgbm=3.3.2
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==14.0.1
+pip install python-dotenv==0.20.0 cdsetool==0.1.3 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 s2cloudless==1.7.0 juliacall==0.9.14 pyarrow==14.0.1
 conda install -c pytorch pytorch=1.13.1 torchvision=0.14.1 torchaudio=0.13.1
 ```
 *Ubuntu*
 ```
 pip install --find-links=https://girder.github.io/large_image_wheels --no-cache GDAL==3.5.0
 pip install geopandas==0.11.1 s2cloudless==1.7.0 pip install lightgbm==3.3.2
-pip install python-dotenv==0.20.0 sentinelsat==1.1.1 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==14.0.1
+pip install python-dotenv==0.20.0 cdsetool==0.1.3 zipfile36==0.1.3 netCDF4==1.5.8 pyproj==3.3.1 scikit-image==0.19.2 pyhdf==0.10.5 --extra-index-url https://artifactory.vgt.vito.be/api/pypi/python-packages/simple terracatalogueclient==0.1.11 matplotlib==3.5.2 pandas==1.4.3 scikit-learn==1.1.1 ubelt==1.1.2 rasterio==1.3.0.post1 hummingbird-ml==0.4.5 xgboost==1.7.3 juliacall==0.9.14 pyarrow==14.0.1
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
 ```
 
@@ -113,7 +113,7 @@ Visualization with [QGIS](https://qgis.org/en/site/), color palette provided ins
 
 ## Citation
 
-If you find POS2IDON useful in your research, please acknowledge us using the following reference:
+If you find POS2IDON useful in your research, acknowledge us using the following reference:
 
 - A. Valente, E. Castanho, A. Giusti, J. Pinelo and P. Silva, "An Open-Source Data Pipeline Framework to Detect Floating Marine Plastic Litter Using Sentinel-2 Imagery and Machine Learning," IGARSS 2023 - 2023 IEEE International Geoscience and Remote Sensing Symposium, Pasadena, CA, USA, 2023, pp. 4108-4111, doi: [10.1109/IGARSS52108.2023.10281415](https://ieeexplore.ieee.org/document/10281415).
 
