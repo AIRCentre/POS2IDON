@@ -14,13 +14,11 @@ Credentials must be modified in the hidden .env file.
 # If False, this step will be ignored and the products list must exist inside s2l1c_products_folder
 # for the download to work.
 # Other inputs besides bool will stop the pré-start.
-search = False
+search = True
 
 # Search service:
-# "CDSE" (Copernicus Data Space Ecosystem - the new ESA service).
-# "COAH" (Copernicus Open Access Hub - better for recent data and near real time application). 
 # "GC" (Google Cloud - better for old data and long term application).
-# "CDSE" (Copernicus Data Space Ecosystem - the new ESA service). Full archive soon!
+# "CDSE" (Copernicus Data Space Ecosystem - better for recent data and near real time application).
 # Other inputs besides string will stop the pré-start.
 # Other strings will be considered as "CDSE".
 service = "GC"
@@ -30,14 +28,7 @@ service = "GC"
                    # Filter specific combination from the S2L1CProducts_URLs.txt, 
                    # e.g. "T31UDU", "R094_T31UDU" or "R094"
                    # String, use "" to ignore.
-service_options = {"filter": "",                  
-                   # Number of Long Term Archive attempts for COAH service.
-                   # Minimum is 1 attempt. Script waits 60 seconds between each attempt.
-                   "lta_attempts": 5,
-                   # If first time using CDSE, generate an acess token. 
-                   # Needs to have credentials or refresh token inside .env file.
-                   # Access token will be saved inside same .env file. 
-                   "generate_token": True} 
+service_options = {"filter": ""} 
 
 # Region Of Interest (ROI): 
 # SentinelHub EOBrowser (https://apps.sentinel-hub.com/eo-browser/) format. 
@@ -74,14 +65,14 @@ processing = True
 # True - Downloads Sentinel-2 L1C products from the services using URLs file. 
 # False - Does not download products, it assumes you downloaded already.
 # Other inputs besides bool will stop the pré-start.
-download = False
+download = True
 
 
 # Atmospheric correction of Sentinel-2 L1C Products using ACOLITE. 
 # True - AC products inside s2l1c_products_folder.
 # False - Does not AC products, it assumes they exist already.
 # Other inputs besides bool will stop the pré-start.
-atmospheric_correction = False
+atmospheric_correction = True
 
 
 # Apply masks to the atmospheric corrected product.
@@ -98,23 +89,23 @@ masking = True
 # "cloud_mask": False
                    # Use existing ESA WorldCover Tiles that are inside 2-1_ESA_Worldcover to create water mask.
                    # If False, it will download the tiles.
-masking_options = {"use_existing_ESAwc": True,  
+masking_options = {"use_existing_ESAwc": False,  
                    # Buffer size applied to land, 0 to ignore.
-                   "land_buffer": 0,
+                   "land_buffer": 0, # 50
                    # Apply mask based on 'NDWI' or 'BAND8' (features), None to ignore.
-                   "features_mask": 'BAND8',
+                   "features_mask": None, # NDWI
                    # NDWI and Band8 thresholds
-                   "threshold_values": [0.5, 0.01],
+                   "threshold_values": [0, None], #NDWI 0.01 
                    # NDWI and Band8 dilations (number of iteration must be equal or greater then 1)
-                   "dilation_values": [6, 2],
+                   "dilation_values": [6, 2], #6,2
                    # Create cloud mask using s2cloudless, false to ignore.
                    "cloud_mask": True,
                    # Cloud probability threshold, pixels with cloud probability above this threshold are masked as cloudy pixels.
-                   "cloud_mask_threshold": 0.4,
+                   "cloud_mask_threshold": 0.05, #0.01 didnt consider a big patch of MD in Honduras. For South Africa needs to be higher value.
                    # Size of the disk in pixels to performe convolution (averaging probability over pixels).
-                   "cloud_mask_average": 2,
+                   "cloud_mask_average": 10, #10
                    # Size of the disk in pixels to performe dilation.
-                   "cloud_mask_dilation": 1
+                   "cloud_mask_dilation": 10 #50
                    }
 
 
@@ -164,12 +155,12 @@ classification_options = {"split_and_mosaic": False,
 # Other inputs besides dictionary with correct values will stop the pré-start.
           # Delete original products:
           # Deletes original product after each processing.
-delete = {"original_products": False,
+delete = {"original_products": False, # True
           # Delete some intermediate after each processing - Recommended:
           # Deletes Surface_Reflectance_Bands, Top_Atmosphere_Bands, masked Patches,
           # Mosaics and single intermediate files in both sc_maps and proba_maps.
           # But DOESN'T, delete atmospheric correction stack, Masks, masked stack.
-          "some_intermediate": False,
+          "some_intermediate": False, # True
           # Delete all intermediate after each processing - Not Recommended:
           # Only final results available.
           # Deletes Surface_Reflectance_Bands, Top_Atmosphere_Bands, masked Patches,
