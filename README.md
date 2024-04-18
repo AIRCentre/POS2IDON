@@ -117,6 +117,6 @@ If you find POS2IDON useful in your research, acknowledge us using the following
 
 - A. Valente, E. Castanho, A. Giusti, J. Pinelo and P. Silva, "An Open-Source Data Pipeline Framework to Detect Floating Marine Plastic Litter Using Sentinel-2 Imagery and Machine Learning," IGARSS 2023 - 2023 IEEE International Geoscience and Remote Sensing Symposium, Pasadena, CA, USA, 2023, pp. 4108-4111, doi: [10.1109/IGARSS52108.2023.10281415](https://ieeexplore.ieee.org/document/10281415).
 
-
+POS2IDON tool has been tested in the framework of different EU projects (LabPlas and EcoBlue) and under different data approaches.
 
 POS2IDON is provided by AIR Centre as an experimental tool, without explicit or implied warranty. Use of the tool is at your own discretion and risk.
