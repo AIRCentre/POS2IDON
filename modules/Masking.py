@@ -38,18 +38,17 @@ def Create_Mask_fromWCMaps(MaskProduct, WorldCoverMapsFolder, DstEPSG, Bounds, S
                             This True flag is used here to create a mask with value 1 (water).  
            BufferSize - Size of buffer applied to land, if 0 buffer step is ignored.
     Output: In this mask the value 1 represents water and NaNs (since NaNs are used in WorldCover map as open ocean), the value 0 represents land.
-            LogList - Function's log outputs. List of strings.
+            log_list - Logging messages.
     """
-    LogList = []
+    # Logging list
+    log_list = []
 
     ProductToMaskName = os.path.basename(MaskProduct)
     MaskFolder = os.path.join(MaskProduct, "Masks")
 
     if WCnonExistTile == True:
         # Create mask filled with 1 representing a non-existing tile in the middle of the ocean
-        OutputLog = "Generating mask of non-existing WorldCover tile in the middle of the ocean."
-        LogList.append(OutputLog)
-        print(OutputLog)
+        log_list.append("Generated mask of non-existing WorldCover tile in the middle of the ocean")
 
         Driver = gdal.GetDriverByName("GTiff")
         MaskPath = os.path.join(MaskFolder, ProductToMaskName + "_WATER_Mask.tif")
@@ -116,12 +115,7 @@ def Create_Mask_fromWCMaps(MaskProduct, WorldCoverMapsFolder, DstEPSG, Bounds, S
         MaskBand = None
         SingleWorldCoverMapClipped = None
 
-
-    OutputLog = "Done."
-    LogList.append(OutputLog)
-    print(OutputLog)
-
-    return LogList
+    return log_list
 
 #################################################################################################################################
 def Create_Mask_fromNDWI(ProductToMask, MaskingProductFolder, NDWIthreshold,NDWIDilation_Size):
@@ -135,7 +129,6 @@ def Create_Mask_fromNDWI(ProductToMask, MaskingProductFolder, NDWIthreshold,NDWI
            NDWIthreshold - NDWI threshold value to create mask, default is 0.5. Float.
            NDWIDilation_Size - number of iteration to perform dilation (>= 1)
     Output: Creation of several NDWI based masks.
-            LogList - Function's log outputs. List of strings.
     """
 
     ProductToMaskName = os.path.basename(ProductToMask)
@@ -185,12 +178,6 @@ def Create_Mask_fromNDWI(ProductToMask, MaskingProductFolder, NDWIthreshold,NDWI
         os.remove(NDWIPathAndTifName)
     if os.path.exists(NDWI_Thr_PathAndTifName):
         os.remove(NDWI_Thr_PathAndTifName)
-    
-    OutputLog = "Done."
-    LogList = [OutputLog]
-    print(OutputLog)
-    
-    return LogList
 
 #################################################################################################################################
 def Create_Mask_fromBand8(ProductToMask, MaskingProductFolder, Band8threshold, Band8Dilation_Size):
@@ -204,7 +191,6 @@ def Create_Mask_fromBand8(ProductToMask, MaskingProductFolder, Band8threshold, B
            Band8threshold - Band 8 threshold value to create mask, default is 0.03. Float.
            Band8Dilation_Size - number of iteration to perform dilation (>= 1)
     Output: Creation of band 8 based masks.
-            LogList - Function's log outputs. List of strings.
     """
     ProductToMaskName = os.path.basename(ProductToMask)
     # Get stack
@@ -249,12 +235,6 @@ def Create_Mask_fromBand8(ProductToMask, MaskingProductFolder, Band8threshold, B
     if os.path.exists(MaskB8_Thr_PathAndTifName):
         os.remove(MaskB8_Thr_PathAndTifName)
 
-    OutputLog = "Done."
-    LogList = [OutputLog]
-    print(OutputLog)
-    
-    return LogList
-
 #################################################################################################################################
 def Create_Nan_Mask(ProductToMask, MaskingProductFolder):
     """
@@ -262,7 +242,6 @@ def Create_Nan_Mask(ProductToMask, MaskingProductFolder):
     Input: ProductToMask - Path to the ACOLITE product folder where the stack with Band8 is saved. String.
            MaskingProductFolder - Folder where the masks will be saved. String.
     Output: Creation of band Nan based mask.
-            LogList - Function's log outputs. List of strings.
     """
     ProductToMaskName = os.path.basename(ProductToMask)
     # Get stack
@@ -288,12 +267,6 @@ def Create_Nan_Mask(ProductToMask, MaskingProductFolder):
     # Close opened rasters
     Stack = None
 
-    OutputLog = "Done."
-    LogList = [OutputLog]
-    print(OutputLog)
-    
-    return LogList
-
 ########################################################################################################################################  
 def CloudMasking_S2CloudLess_ROI_10m(ac_product_folder, MaskingProductFolder, S2CL_Threshold, S2CL_Average, S2CL_Dilation):
     """
@@ -308,7 +281,6 @@ def CloudMasking_S2CloudLess_ROI_10m(ac_product_folder, MaskingProductFolder, S2
     Input:  ACOLITE Top of Atmosphere reflectances.
             MaskingProductFolder - Folder where the masks will be saved. String.
     Output: Cloud masked product file at 10m spatial resolution (as .tif).
-            LogList - Function's log outputs. List of strings.
     """
     # Get shape and reprojection info from reference band
     ReferenceImage = os.path.join(ac_product_folder, 'Top_Atmosphere_Bands', 'rhot_B02.tif')
@@ -344,12 +316,6 @@ def CloudMasking_S2CloudLess_ROI_10m(ac_product_folder, MaskingProductFolder, S2
     # Write output cloud probability (Comment if needed)
     #with rasterio.open(os.path.join(MaskingProductFolder, ac_product_name+'_CLOUD_Prob_10m.tif'), "w",  driver='GTiff',compress="lzw",height=Cloud_Probs.shape[1],width=Cloud_Probs.shape[2],count=1,dtype=Cloud_Probs.dtype,nodata=255, transform=aff, crs=crs) as dest:
     #    dest.write(Cloud_Probs)
-    
-    OutputLog = "Done."
-    LogList = [OutputLog]
-    print(OutputLog)
-        
-    return LogList
 
 #######################################################################################################################################
 def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', False]):
@@ -358,9 +324,12 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
     Input: masked_product - Folder of the product where the Masks folder containing masks is saved. String.
            NDWI_or_Band8_andS2cloudlessUIn - A List containing the User Inputs for NDWI/BAND8 and Cloud Mask options. Default is ['BAND8' for NDWI or BAND8 mask, False for Cloud mask]. List [string , bool].
     Output: Final Mask resulting from available masks.
-            LogList - Function's log outputs. List of strings.
+            log_list - Logging messages.
             FinalMaskPath - Path to the final mask.
     """
+    # Logging list
+    log_list = []
+
     MaskingProductFolder = os.path.join(masked_product, "Masks")
     Name = os.path.basename(masked_product)
      
@@ -375,9 +344,7 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
      
     if NDWI_or_Band8_andS2cloudlessUIn[0] == 'NDWI' and NDWI_or_Band8_andS2cloudlessUIn[1] == True:
         
-        OutputLog = "Creating FINAL Mask using ALL (WATER, NDWI and CLOUD) masks."
-        LogList = [OutputLog]
-        print(OutputLog)
+        log_list.append("Created FINAL Mask using ALL (WATER, NDWI and CLOUD) masks")
 
         # Pick NDWI mask
         NDWIMask = ",".join(glob.glob(os.path.join(MaskingProductFolder, '*NDWI_Thr_Dil_Mask.tif'))).replace("\\","/")
@@ -404,15 +371,9 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
         FinalMaskBand.WriteArray(FinalMaskData)
         FinalMaskBand = None
 
-        OutputLog = "Done."
-        LogList.append(OutputLog)
-        print(OutputLog)
-
     elif NDWI_or_Band8_andS2cloudlessUIn[0] == 'BAND8' and NDWI_or_Band8_andS2cloudlessUIn[1] == True:
         
-        OutputLog = "Creating FINAL Mask using ALL (WATER, BAND 8 and CLOUD) masks."
-        LogList = [OutputLog]
-        print(OutputLog)
+        log_list.append("Created FINAL Mask using ALL (WATER, BAND 8 and CLOUD) masks")
 
         # Pick BAND 8 mask
         Band8Mask = ",".join(glob.glob(os.path.join(MaskingProductFolder, '*Band8_Thr_Dil_Mask.tif'))).replace("\\","/")
@@ -439,15 +400,9 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
         FinalMaskBand.WriteArray(FinalMaskData)
         FinalMaskBand = None
 
-        OutputLog = "Done."
-        LogList.append(OutputLog)
-        print(OutputLog)
-
     elif NDWI_or_Band8_andS2cloudlessUIn[0] == None and NDWI_or_Band8_andS2cloudlessUIn[1] == True:
        
-        OutputLog = "Creating FINAL Mask using WATER Mask and CLOUD Mask..."
-        LogList = [OutputLog]
-        print(OutputLog)
+        log_list.append("Created FINAL Mask using WATER Mask and CLOUD Mask")
 
         # Pick CLOUD mask
         CloudMask = ",".join(glob.glob(os.path.join(MaskingProductFolder, '*CLOUD_Mask_10m.tif'))).replace("\\","/")
@@ -466,16 +421,10 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
         FinalMaskBand = FinalMask.GetRasterBand(1)
         FinalMaskBand.WriteArray(FinalMaskData)
         FinalMaskBand = None
-
-        OutputLog = "Done."
-        LogList.append(OutputLog)
-        print(OutputLog)
           
     elif NDWI_or_Band8_andS2cloudlessUIn[0] == 'NDWI' and NDWI_or_Band8_andS2cloudlessUIn[1] == False:
        
-        OutputLog = "Creating FINAL Mask using WATER Mask and NDWI Mask..."
-        LogList = [OutputLog]
-        print(OutputLog)
+        log_list.append("Created FINAL Mask using WATER Mask and NDWI Mask")
           
         # Pick NDWI mask
         NDWIMask = ",".join(glob.glob(os.path.join(MaskingProductFolder, '*NDWI_Thr_Dil_Mask.tif'))).replace("\\","/")
@@ -495,15 +444,9 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
         FinalMaskBand.WriteArray(FinalMaskData)
         FinalMaskBand = None
 
-        OutputLog = "Done."
-        LogList.append(OutputLog)
-        print(OutputLog)
-
     elif NDWI_or_Band8_andS2cloudlessUIn[0] == 'BAND8' and NDWI_or_Band8_andS2cloudlessUIn[1] == False:
        
-        OutputLog = "Creating FINAL Mask using WATER Mask and BAND 8 Mask..."
-        LogList = [OutputLog]
-        print(OutputLog)
+        log_list.append("Created FINAL Mask using WATER Mask and BAND 8 Mask")
           
         # Pick BAND 8 mask
         Band8Mask = ",".join(glob.glob(os.path.join(MaskingProductFolder, '*Band8_Thr_Dil_Mask.tif'))).replace("\\","/")
@@ -523,14 +466,8 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
         FinalMaskBand.WriteArray(FinalMaskData)
         FinalMaskBand = None
 
-        OutputLog = "Done."
-        LogList.append(OutputLog)
-        print(OutputLog)
-
     else:
-        OutputLog = "FINAL Mask corresponds to the WATER Mask."
-        LogList = [OutputLog]
-        print(OutputLog)
+        log_list.append("FINAL Mask corresponds to the WATER Mask")
         # Pick WATER mask, make a copy and change name
         shutil.copy(WaterMask, FinalMaskPath)
 
@@ -540,7 +477,7 @@ def CreateFinalMask(masked_product, NDWI_or_Band8_andS2cloudlessUIn = ['BAND8', 
     CloudMaskOpen = None
     Band8MaskOpen = None
         
-    return LogList, FinalMaskPath
+    return log_list, FinalMaskPath
 
 #######################################################################################################################################
 def mask_stack(ac_product_folder, masked_product_folder, filter_ignore_value):
