@@ -8,71 +8,42 @@ Atlantic International Research Centre (AIR Centre - EO LAB), Terceira, Azores, 
 
 @author: AIR Centre
 """
-### FULL PRÉ-START #########################################################################
-print("\n")
-print("|-----------------------------------------------------------------------------|")
-print("|  WELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 |")
-print("|-----------------------------------------------------------------------------|")
-print("\n")
 
-# Init script outputs list to save as log file
-log_list = ["\nWELCOME TO POS2IDON - Pipeline for ocean feature detection with Sentinel 2 \n"]
+### Pré Start
 
-# Pré-start functions
+# Start logging
 try:
-    print("Importing Pré-start functions...")
-    from modules.PreStart import git_clone_acolite_fels, ScriptOutput2List, ScriptOutputs2LogFile, input_checker
-    print("Done.\n")
-    pre_start_functions_flag = 1
+    import logging
+    logging.basicConfig(filename="4_logfile.log", format="%(asctime)s - %(name)s - %(message)s", filemode='w') 
+    main_logger = logging.getLogger("main") 
+    main_logger.setLevel(logging.INFO) 
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(message)s"))
+    main_logger.addHandler(handler) 
+    main_logger.info("WELCOME TO POS2IDON (Pipeline for ocean feature detection with Sentinel 2)")
+    logging_flag = 1
 except Exception as e:
-    print(str(e) + '\n')
-    pre_start_functions_flag = 0
+    print(str(e))
+    logging_flag = 0
 
 # Julia packages - Install manually inside the juliacall environemnt
 # pos2idon-env -> julia_env -> open terminal -> Julia REPL -> enter Pkg ] -> activate . -> add Package
 try:
-    print("Importing Julia packages...")
-    print("All packages must be installed in the juliacall environment.")
+    main_logger.info("Importing Julia packages (must be installed in the juliacall environment)")
     from juliacall import Main as jl
     jl.seval("using Flux") #add
     jl.seval("using BSON") #add
     jl.seval("using Glob") #add
     jl.seval("using Base.Threads")
     jl.seval("using CUDA") #add
-    print("Done.\n")
     julia_packages_flag = 1
 except Exception as e:
-    print(str(e) + '\n')
+    main_logger.info(str(e))
     julia_packages_flag = 0
-
-# Clone important modules from GitHub (FeLS and ACOLITE)
-try:
-    git_clone_acolite_fels("configs")
-    clone_flag = 1
-except Exception as e:
-    print(str(e) + '\n')
-    clone_flag = 0
-
-# Import libraries
-try:
-    print("Importing Libraries...")
-    import os
-    from dotenv import load_dotenv
-    import glob
-    import time
-
-    # Start time of POS2IDON
-    POS2IDON_time0 = time.time()
-
-    print("Done.\n")
-    libraries_flag = 1
-except Exception as e:
-    print(str(e) + "\n")
-    libraries_flag = 0
 
 # Import defined modules
 try:
-    print("Importing Defined Modules...")
+    main_logger.info("Importing Defined Modules")
     from modules.Auxiliar import * 
     from modules.S2L1CProcessing import *
     from modules.S2L2Processing import *
@@ -80,87 +51,106 @@ try:
     from modules.SpectralIndices import *
     from modules.Tiling import *
     from modules.Classification import *
-    print("Done.\n")
     modules_flag = 1
 except Exception as e:
-    print(str(e) + "\n")
+    main_logger.info(str(e))
     modules_flag = 0
+
+# Clone important modules from GitHub (FeLS and ACOLITE)
+try:
+    log_list_0 = git_clone_acolite_fels("configs")
+    for log in log_list_0: main_logger.info(log)
+    clone_flag = 1
+except Exception as e:
+    main_logger.info(str(e))
+    clone_flag = 0
 
 # Import user inputs
 try:
     inputs_flag = 1
-    print("Importing User Inputs...")
+    main_logger.info("Importing User Inputs")
     from configs.User_Inputs import *
-    print("Done.")
     # Input checker
-    print("Checking User Inputs...")
-    inputs_flag = input_checker()
-    print("Done.\n")
+    main_logger.info("Checking User Inputs")
+    inputs_flag, log_list_5 = input_checker()
+    for log in log_list_5: main_logger.info(log)
 except Exception as e:
-    print(str(e) + "\n")
+    main_logger.info(str(e))
     inputs_flag = 0
+
+# Import some libraries
+try:
+    main_logger.info("Importing Libraries")
+    import os
+    from dotenv import load_dotenv
+    import glob
+    import time
+
+    libraries_flag = 1
+except Exception as e:
+    main_logger.info(str(e))
+    libraries_flag = 0
 
 # Import credentials
 try:
-    print("Importing Credentials...")
+    main_logger.info("Importing Credentials")
     # Path of .env file
     basepath = os.getcwd()
     env_path = os.path.join(basepath,"configs/Environments/.env")
     if os.path.exists(env_path):
         # Environment variables
-        evariables = ("COAHuser", "COAHpassword", "TSuser", "TSpassword", "EDuser", "EDpassword", "CDSEuser", "CDSEpassword")
+        evariables = ("CDSEuser", "CDSEpassword", "TSuser", "TSpassword", "EDuser", "EDpassword")
         load_dotenv(env_path)
         credentials_flag = 1
     else:
-        print("Check credentials .env file.")
+        main_logger.info("Check credentials .env file.")
         credentials_flag = 0
-    print("Done.\n")
 except Exception as e:
-    print(str(e) + "\n")
+    main_logger.info(str(e))
     credentials_flag = 0
 
-pre_start_flag = julia_packages_flag * pre_start_functions_flag * clone_flag * \
+pre_start_flag = julia_packages_flag * logging_flag * clone_flag * \
     libraries_flag * modules_flag * inputs_flag * credentials_flag
+
 ############################################################################################ 
+# Start POS2IDON main processing time
+POS2IDON_time0 = time.time()
 if pre_start_flag == 1:
 
-    # Start main processing time
-    mp_time0 = time.time()
-
     # SEARCH PRODUCTS ######################################################################
-    ScriptOutput2List("SEARCH PRODUCTS", log_list)
+    main_logger.info("SEARCH PRODUCTS")
     if search == True:
         # Create folder to store products
         CreateBrandNewFolder(s2l1c_products_folder)
 
         # Sensing Period definition
         if nrt_sensing_period == True:
-            ScriptOutput2List("Using Yesterday date as Start Date...", log_list)
+            main_logger.info("Using Yesterday date as Start Date")
             sensing_period = NearRealTimeSensingDate()
 
-        # Search products using GC, CDSE or COAH
+        # Search products using GC or CDSE
         try:
-            if service == "COAH":
-                log_list_append = CollectDownloadLinkofS2L1Cproducts_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), roi, sensing_period, s2l1c_products_folder)  
-            elif service == "GC":
-                log_list_append = CollectDownloadLinkofS2L1Cproducts_GC(roi, sensing_period, "configs", s2l1c_products_folder) 
-            elif service == "CDSE":
-                collect_s2l1c_CDSE(roi, sensing_period, s2l1c_products_folder) 
+            if service == "GC":
+                main_logger.info("Searching for Sentinel-2 L1C products on Google Cloud")
+                log_list_1 = CollectDownloadLinkofS2L1Cproducts_GC(roi, sensing_period, "configs", s2l1c_products_folder)
+                for log in log_list_1: main_logger.info(log) 
             else:
-                ScriptOutput2List("Data provider not defined.\n", log_list) 
+                main_logger.info("Searching for Sentinel-2 L1C products on Copernicus Data Space Ecosystem")
+                log_list_9 = collect_s2l1c_cdse(roi, sensing_period, s2l1c_products_folder) 
+                for log in log_list_9: main_logger.info(log)
         except Exception as e:
-            ScriptOutput2List(str(e) + "\n", log_list)
+            main_logger.info(str(e))
     else:
-        ScriptOutput2List("Search of products ignored.\n", log_list)
+        main_logger.info("Search of products ignored")
 
     # PROCESSING ###########################################################################
-    ScriptOutput2List("PROCESSING", log_list)
+    main_logger.info("PROCESSING")
     urls_file = os.path.join(s2l1c_products_folder, "S2L1CProducts_URLs.txt")
     if (processing == True) and os.path.isfile(urls_file):
         # Read S2L1CProducts_URLs.txt file        
         urls_list = open(urls_file).read().splitlines()
-        if len(urls_list) == 0:
-            ScriptOutput2List("List of product urls is empty.\n", log_list)
+        if (len(urls_list) == 0) or (urls_list == [""]):
+            main_logger.info("No product urls")
         else:
             # Create outputs folders
             if atmospheric_correction == True:
@@ -175,59 +165,44 @@ if pre_start_flag == 1:
             if classification == True:
                 CreateBrandNewFolder(classification_products_folder)
 
-            # CDSE token to use on Download
-            if (download == True) and (service == "CDSE"):
-                if service_options["generate_token"] == True:
-                    access_token, refresh_token = generate_tokens(os.getenv(evariables[6]), os.getenv(evariables[7]), refresh_token=os.getenv("CDSE_REFRESH_TOKEN"))
-                    save_tokens(access_token, refresh_token, env_path)
-                else:
-                    access_token = os.getenv("CDSE_ACCESS_TOKEN")
-
             # Create lists of excluded products names to print in the log file
             excluded_products_old_format = []
             excluded_products_no_data_sensing_time = []
             excluded_products_corrupted = []
-            coah_lta_products = []
 
             # Filter products URLs
             urls_list, urls_ignored = filter_safe_products(urls_list, service_options["filter"])
             if len(urls_ignored) != 0:
-                ScriptOutput2List("Some URLs have been ignored, because of filtering option.", log_list)
+                main_logger.info("Some URLs have been ignored, because of filtering option")
 
             # Start loop on urls list
-            ScriptOutput2List("", log_list)
             for i, url in enumerate(urls_list):
                 # Get SAFE file name from url link
                 safe_file_name = url.split('/')[-1]
                 safe_file_path = os.path.join(s2l1c_products_folder, safe_file_name)
-                ScriptOutput2List("(" + str(i+1) +  "/" + str(len(urls_list)) + "): " + safe_file_name + "\n", log_list)
+                main_logger.info("(" + str(i+1) +  "/" + str(len(urls_list)) + "): " + safe_file_name)
                 
                 try:        
                     # -> Download
                     if download == True:
                         # Delete old product that might be corrupted
                         if os.path.exists(safe_file_path):
-                            shutil.rmtree(safe_file_path)
-                        if service == "COAH":
-                            log_list_append = DownloadTile_from_URL_COAH(os.getenv(evariables[0]), os.getenv(evariables[1]), url, s2l1c_products_folder, LTAattempt=service_options["lta_attempts"])
-                            # Check if file is not retrievable from the COAH Long Term Archive
-                            if not os.path.exists(safe_file_path):
-                                coah_lta_products.append(safe_file_name) 
-                                ScriptOutput2List("Download of "+safe_file_name+" from Long Term Archive not available.\n", log_list)  
-                        elif service == "GC":
-                            log_list_append = DownloadTile_from_URL_GC(url, s2l1c_products_folder)
+                            shutil.rmtree(safe_file_path)  
+                        if service == "GC":
+                            main_logger.info("Downloading " + url.split('/')[-1])
+                            DownloadTile_from_URL_GC(url, s2l1c_products_folder)
                             # Check if OPER file was excluded
                             if not os.path.exists(safe_file_path):
                                 excluded_products_old_format.append(safe_file_name)
-                                ScriptOutput2List("The scene is in the redundant OPER old-format (before Nov 2016).Product excluded.\n", log_list)
-                        elif service == "CDSE":
-                            download_s2l1c_CDSE(access_token, url, s2l1c_products_folder)
+                                main_logger.info("The scene is in the redundant OPER old-format (before Nov 2016).Product excluded")
                         else:
-                            ScriptOutput2List("Data provider not defined.\n", log_list) 
+                            main_logger.info("Downloading " + url.split('/')[-1])
+                            log_list_10 = download_s2l1c_cdse(os.getenv(evariables[0]), os.getenv(evariables[1]), url, s2l1c_products_folder)
+                            for log in log_list_10: main_logger.info(log) 
                     else:
-                        ScriptOutput2List("Download of product ignored.\n", log_list)
+                        main_logger.info("Download of product ignored")
                 except Exception as e:
-                    ScriptOutput2List("An error occured during download.\n", log_list)
+                    main_logger.info("An error occured during download")
 
                 try:
                     # URL list is the reference for product selection used during processing
@@ -241,53 +216,48 @@ if pre_start_flag == 1:
                     else:
                         product_short_name = "NONE"
                 except Exception as e:
-                    ScriptOutput2List("Product corrupted. Can't extract short name:", log_list)
-                    ScriptOutput2List(str(e) + "\n", log_list)
+                    main_logger.info("Product corrupted. Can't extract short name: " + str(e))
                     excluded_products_corrupted.append(safe_file_name)
 
                 try:
                     # -> Atmospheric Correction
                     if atmospheric_correction == True:
                         if product_short_name != "NONE":
-                            ScriptOutput2List("Performing atmospheric correction with ACOLITE...", log_list) 
+                            main_logger.info("Performing atmospheric correction with ACOLITE") 
                             # Apply ACOLITE algorithm
                             try:
                                 ACacolite(product_in_urls_list[0], ac_products_folder, os.getenv(evariables[4]), os.getenv(evariables[5]), roi)
                                 corrupted_flag = 0
                             except Exception as e:
                                 corrupted_flag = 1
-                                ScriptOutput2List("Product might be corrupted or ACOLITE is not well configured:", log_list)
-                                ScriptOutput2List(str(e), log_list)
-                                ScriptOutput2List("If this is the first time running the workflow, try to clone ACOLITE manually or check credentials.", log_list)
+                                main_logger.info("Product might be corrupted or ACOLITE is not well configured: " + str(e) + 
+                                                 "\nIf this is the first time running the workflow, try to clone ACOLITE manually or check credentials")
                                 # If product corrupted, ACOLITE might stop and text files will remain in main folder
                                 for trash_txt in glob.glob(os.path.join(ac_products_folder, "*.txt")): 
-                                    os.remove(trash_txt)
-                            ScriptOutput2List("", log_list) 
+                                    os.remove(trash_txt) 
                             # Organize structure of folders and files
-                            log_list_append = CleanAndOrganizeACOLITE(ac_products_folder, s2l1c_products_folder, safe_file_name)
+                            log_list_2 = CleanAndOrganizeACOLITE(ac_products_folder, s2l1c_products_folder, safe_file_name)
+                            for log in log_list_2: main_logger.info(log)
                             if os.path.exists(ac_product):
                                 try:
                                     # Calculate spectral indices
                                     CalculateAllIndexes(ac_product)
                                     # Stack all and delete isolated TIF features
                                     create_features_stack(ac_product, ac_product)
-                                    ScriptOutput2List("Spectral indices calculated and stacked with bands.", log_list)
+                                    main_logger.info("Spectral indices calculated and stacked with bands")
                                 except Exception as e:
-                                    ScriptOutput2List("Product corrupted. Not all features are available:", log_list)
-                                    ScriptOutput2List(str(e), log_list)
+                                    main_logger.info("Product corrupted. Not all features are available: " + str(e))
                                     excluded_products_corrupted.append(safe_file_name)
                             elif corrupted_flag == 1:
                                 excluded_products_corrupted.append(safe_file_name)
                             else:
                                 excluded_products_no_data_sensing_time.append(safe_file_name)
-                            ScriptOutput2List("Done.\n", log_list)
                         else:
-                            ScriptOutput2List("There is no S2L1C product to perform atmospheric correction.\n", log_list)
+                            main_logger.info("There is no S2L1C product to perform atmospheric correction")
                     else:
-                        ScriptOutput2List("Atmospheric Correction of product ignored.\n", log_list)
+                        main_logger.info("Atmospheric Correction of product ignored")
                 except Exception as e:
-                    ScriptOutput2List("An error occured during atmospheric correction:", log_list)
-                    ScriptOutput2List(str(e) + "\n", log_list)
+                    main_logger.info("An error occured during atmospheric correction: " + str(e))
 
                 try:
                     # -> Masking
@@ -297,7 +267,7 @@ if pre_start_flag == 1:
                             with open(os.path.join(ac_product, "Info.txt")) as text_file:
                                 safe_file_name = text_file.read()
                             ac_product_name = os.path.basename(ac_product)
-                            ScriptOutput2List("Masking: " + safe_file_name + " (" + ac_product_name + ")", log_list) 
+                            main_logger.info("Masking: " + safe_file_name + " (" + ac_product_name + ")") 
                            
                             # Reproject previous stack bounds to 4326 and provide geometry
                             ac_product_stack = os.path.join(ac_product, ac_product_name+"_stack.tif")
@@ -310,15 +280,15 @@ if pre_start_flag == 1:
                                 ts_user = os.getenv(evariables[2])
                                 ts_pass = os.getenv(evariables[3])
                                 # Download ESA WorldCover Maps
-                                log_list_append, esa_wc_non_existing = Download_WorldCoverMaps([ts_user, ts_pass], stack_geometry, esa_wc_folder) 
-                                ScriptOutput2List("", log_list)
+                                main_logger.info("Downloading WorldCover tile")
+                                log_list_3, esa_wc_non_existing = Download_WorldCoverMaps([ts_user, ts_pass], stack_geometry, esa_wc_folder) 
+                                for log in log_list_3: main_logger.info(log)
                             else:
-                                ScriptOutput2List("\nDownload of ESA WorldCover maps ignored.", log_list)
+                                main_logger.info("Download of ESA WorldCover maps ignored")
                                 if len(glob.glob(os.path.join(esa_wc_folder, "*.tif"))) == 0:
-                                    ScriptOutput2List("2-1_ESA_Worldcover folder is empty, using artificial water mask.\n", log_list) 
+                                    main_logger.info("2-1_ESA_Worldcover folder is empty, using artificial water mask") 
                                     esa_wc_non_existing = True
                                 else:
-                                    ScriptOutput2List("", log_list)
                                     esa_wc_non_existing = False
 
                             # Create masked product folder and masks folder inside
@@ -327,65 +297,61 @@ if pre_start_flag == 1:
                             CreateBrandNewFolder(masks_folder)
 
                             # -> Water Mask
-                            ScriptOutput2List("Creating Water mask...", log_list)
-                            log_list_append = Create_Mask_fromWCMaps(masked_product, esa_wc_folder, stack_epsg, stack_bounds, stack_res[0], esa_wc_non_existing, masking_options["land_buffer"])
-                            ScriptOutput2List("", log_list)
+                            main_logger.info("Creating Water mask")
+                            log_list_4 = Create_Mask_fromWCMaps(masked_product, esa_wc_folder, stack_epsg, stack_bounds, stack_res[0], esa_wc_non_existing, masking_options["land_buffer"])
+                            for log in log_list_4: main_logger.info(log)
                        
                             # -> Features Masks
                             if masking_options["features_mask"] == "NDWI":
-                                ScriptOutput2List("Creating NDWI-based mask...", log_list)
-                                log_list_append = Create_Mask_fromNDWI(ac_product, masks_folder, masking_options["threshold_values"][0], masking_options["dilation_values"][0])
+                                main_logger.info("Creating NDWI-based mask")
+                                Create_Mask_fromNDWI(ac_product, masks_folder, masking_options["threshold_values"][0], masking_options["dilation_values"][0])
                             elif masking_options["features_mask"] == "BAND8":
-                                ScriptOutput2List("Creating Band8-based mask...", log_list)
-                                log_list_append = Create_Mask_fromBand8(ac_product, masks_folder, masking_options["threshold_values"][1], masking_options["dilation_values"][1])
+                                main_logger.info("Creating Band8-based mask")
+                                Create_Mask_fromBand8(ac_product, masks_folder, masking_options["threshold_values"][1], masking_options["dilation_values"][1])
                             else:
-                                ScriptOutput2List("NDWI-based or Band8-based masking ignored.", log_list)
-                            ScriptOutput2List("", log_list)
+                                main_logger.info("NDWI-based or Band8-based masking ignored")
                            
                             # -> Cloud Mask
                             if masking_options["cloud_mask"] == True:
-                                ScriptOutput2List("Creating Cloud mask...", log_list)
+                                main_logger.info("Creating Cloud mask")
                                 try:
-                                    log_list_append = CloudMasking_S2CloudLess_ROI_10m(ac_product, masks_folder, masking_options["cloud_mask_threshold"], masking_options["cloud_mask_average"], masking_options["cloud_mask_dilation"])
+                                    CloudMasking_S2CloudLess_ROI_10m(ac_product, masks_folder, masking_options["cloud_mask_threshold"], masking_options["cloud_mask_average"], masking_options["cloud_mask_dilation"])
                                 except Exception as e:
                                     if str(e)[-15:] == "'GetRasterBand'":
-                                        ScriptOutput2List("Product corrupted. Bands are missing.", log_list)
+                                        main_logger.info("Product corrupted. Bands are missing")
                                         excluded_products_corrupted.append(safe_file_name)
                                     else:
-                                        ScriptOutput2List(str(e) + "\n", log_list)
+                                        main_logger.info(str(e))
                                     masking_options["cloud_mask"] = False
                             else:
-                                ScriptOutput2List("Cloud masking ignored.", log_list)
-                            ScriptOutput2List("", log_list)
+                                main_logger.info("Cloud masking ignored")
  
                             # Create final mask
-                            ScriptOutput2List("Creating Final mask...", log_list)
+                            main_logger.info("Creating Final mask")
                             user_inputs_masks = [masking_options["features_mask"], masking_options["cloud_mask"]]
-                            log_list_append, final_mask_path = CreateFinalMask(masked_product, user_inputs_masks)
-                            ScriptOutput2List("", log_list)
+                            log_list_6, final_mask_path = CreateFinalMask(masked_product, user_inputs_masks)
+                            for log in log_list_6: main_logger.info(log)
 
                             # Apply mask
                             if (classification_options["ml_algorithm"] == "rf") or (classification_options["ml_algorithm"] == "xgb"):
                                 # Apply final mask to stack
-                                ScriptOutput2List("Masking stack...", log_list)
+                                main_logger.info("Masking stack")
                                 mask_stack(ac_product, masked_product, filter_ignore_value=0)
                             else:
                                 # For UNET apply final mask later
-                                ScriptOutput2List("For Unet masking will be applied later.", log_list)
+                                main_logger.info("For Unet masking will be applied later")
                                 shutil.copy(os.path.join(ac_product, ac_product_name+"_stack.tif"), os.path.join(masked_product, ac_product_name+"_masked_stack.tif"))
-                            ScriptOutput2List("Done.\n", log_list)
 
                             # Copy info text file
                             info_file_in = os.path.join(ac_product, "Info.txt")
                             info_file_out = os.path.join(masked_product, "Info.txt")
                             shutil.copy(info_file_in, info_file_out)
                         else:
-                            ScriptOutput2List("There is no atmospheric corrected product to apply masking.\n", log_list)
+                            main_logger.info("There is no atmospheric corrected product to apply masking")
                     else:
-                        ScriptOutput2List("Masking of products ignored.\n", log_list)
+                        main_logger.info("Masking of products ignored")
                 except Exception as e:
-                    ScriptOutput2List("An error occured during masking:", log_list)
-                    ScriptOutput2List(str(e) + "\n", log_list)
+                    main_logger.info("An error occured during masking: " + str(e))
 
                 try:
                     # -> Classification
@@ -396,38 +362,39 @@ if pre_start_flag == 1:
                                 safe_file_name = text_file.read()
                             masked_product_name = os.path.basename(masked_product)
                             masked_file_name = os.path.basename(glob.glob(os.path.join(masked_product, "*.tif"))[0])[:-4]
-                            ScriptOutput2List("Classification: " + safe_file_name + " (" + masked_product_name + ")\n", log_list)
+                            main_logger.info("Classification of: " + safe_file_name + " (" + masked_product_name + ")")
 
                             # -> Split
                             if classification_options["split_and_mosaic"] == True:
-                                ScriptOutput2List("Spliting into 256x256 patches...", log_list) 
+                                main_logger.info("Spliting into 256x256 patches") 
                                 split_image_with_overlap(masked_product, patch_size=(256,256), overlap=0.5) # overlap of 50%
-                                ScriptOutput2List("Done.\n", log_list)
                             else: 
-                                ScriptOutput2List("Spliting ignored.\n", log_list)
+                                main_logger.info("Spliting ignored")
 
                             # -> Classification selection
                             # Create classification product folder
                             CreateBrandNewFolder(classification_product)
-                            
+                            main_logger.info("Performing classification")
                             if classification_options["split_and_mosaic"] == True:
-                                log_list_append = create_sc_proba_maps(os.path.join(masked_product, "Patches"), classification_product, classification_options)
+                                log_list_7 = create_sc_proba_maps(os.path.join(masked_product, "Patches"), classification_product, classification_options)
+                                for log in log_list_7: main_logger.info(log)
                             else:
-                                log_list_append = create_sc_proba_maps(masked_product, classification_product, classification_options)
+                                log_list_7 = create_sc_proba_maps(masked_product, classification_product, classification_options)
+                                for log in log_list_7: main_logger.info(log)
 
                             # -> Mosaic
                             if classification_options["split_and_mosaic"] == True:
-                                ScriptOutput2List("Performing mosaic of patches...", log_list) 
+                                main_logger.info("Performing mosaic of patches") 
                                 sc_maps_folder = os.path.join(classification_product, "sc_maps")
                                 if (classification_options["ml_algorithm"] == "unet"):
                                     final_mosaic_name = masked_product_name + "_stack_unet-scmap_mosaic"
                                     mosaic_patches(sc_maps_folder, sc_maps_folder, final_mosaic_name)
                                     # Apply later mask to Unet mosaic
-                                    ScriptOutput2List("Creating Nan mask...", log_list)
+                                    main_logger.info("Creating Nan mask")
                                     masks_folder = os.path.join(masked_product, "Masks")
                                     Create_Nan_Mask(ac_product, masks_folder)
                                     mask_stack_later(sc_maps_folder, masked_product, filter_ignore_value=0)
-                                    ScriptOutput2List("Final mask applied to Unet mosaic (sc_map).", log_list)
+                                    main_logger.info("Final mask applied to Unet mosaic (sc_map)")
                                 else:
                                     final_mosaic_name = masked_file_name + "_" + classification_options["ml_algorithm"] + "-"
                                     mosaic_patches(sc_maps_folder, sc_maps_folder, final_mosaic_name+"scmap")
@@ -439,90 +406,80 @@ if pre_start_flag == 1:
                                         mosaic_patches(proba_maps_folder, proba_maps_folder, final_mosaic_name)
                                         # Apply later mask to Unet mosaic
                                         mask_stack_later(proba_maps_folder, masked_product, filter_ignore_value=0)
-                                        ScriptOutput2List("Final mask applied to Unet mosaic (proba_map).", log_list)
+                                        main_logger.info("Final mask applied to Unet mosaic (proba_map)")
                                     else:
                                         final_mosaic_name = masked_file_name + "_" + classification_options["ml_algorithm"] + "-"
                                         mosaic_patches(proba_maps_folder, proba_maps_folder, final_mosaic_name+"probamap")
-
-                                ScriptOutput2List("Done.\n", log_list)
                             else: 
-                                ScriptOutput2List("Mosaic ignored.\n", log_list)
+                                main_logger.info("Mosaic ignored")
 
                             # Copy info text file
                             info_file_in = os.path.join(masked_product, "Info.txt")
                             info_file_out = os.path.join(classification_product, "Info.txt")
                             shutil.copy(info_file_in, info_file_out)
+
+                            # Convert final classification map to feather
+                            raster_to_feather(os.path.join(classification_product, "sc_maps", masked_file_name + "_" + classification_options["ml_algorithm"] + "-scmap.tif"))
+                            main_logger.info("SC map converted to feather")
                         else:
-                            ScriptOutput2List("There is no masked product to apply classification.\n", log_list)
-                        
-                        # Convert final classification map to feather
-                        raster_to_feather(os.path.join(classification_product, "sc_maps", masked_file_name + "_" + classification_options["ml_algorithm"] + "-scmap.tif"))
-                        ScriptOutput2List("SC map converted to feather.\n", log_list)
+                            main_logger.info("There is no masked product to apply classification") 
                     else:
-                        ScriptOutput2List("Classification of products ignored.\n", log_list)
+                        main_logger.info("Classification of products ignored")
                 except Exception as e:
-                    ScriptOutput2List("An error occured during classification:", log_list)
-                    ScriptOutput2List(str(e) + "\n", log_list)
+                    main_logger.info("An error occured during classification: " + str(e))
 
                 # Delete processing folders and files
                 try:
                     # -> Delete original products
                     if delete["original_products"] == True:
                         delete_folder(safe_file_path)
-                        ScriptOutput2List("Original products deleted.\n", log_list)
+                        main_logger.info("Original products deleted")
 
                     # -> Delete some intermediate 
                     if delete["some_intermediate"] == True:
                         delete_intermediate(ac_product, masked_product, classification_product, mode="some")
-                        ScriptOutput2List("Some intermediate folders and files deleted.\n", log_list)
+                        main_logger.info("Some intermediate folders and files deleted")
 
                     # -> Delete all intermediate
                     if delete["all_intermediate"] == True:
                         delete_intermediate(ac_product, masked_product, classification_product, mode="all")
-                        ScriptOutput2List("All intermediate folders and files deleted.\n", log_list)
+                        main_logger.info("All intermediate folders and files deleted")
                 except Exception as e:
-                    ScriptOutput2List("An error occurred while deleting folders and files:", log_list)
-                    ScriptOutput2List(str(e) + "\n", log_list)
+                    main_logger.info("An error occurred while deleting folders and files: " + str(e))
 
             # Statistics
             number_found_products = len(urls_list)
             number_excluded_products_old_format = len(excluded_products_old_format)
             number_excluded_products_no_data_sensing_time = len(excluded_products_no_data_sensing_time)
-            number_coah_lta_products = len(coah_lta_products)
             number_excluded_products_corrupted = len(excluded_products_corrupted)
             number_processed_products = number_found_products - (number_excluded_products_old_format + \
-            number_excluded_products_no_data_sensing_time + number_coah_lta_products + number_excluded_products_corrupted)
+            number_excluded_products_no_data_sensing_time + number_excluded_products_corrupted)
         
             # Products found in ROI for selected Sensing Period
-            ScriptOutput2List("Number of products found for selected ROI and Sensing Period: " + str(number_found_products), log_list)
+            main_logger.info("Number of products found for selected ROI and Sensing Period: " + str(number_found_products))
             # Products processed in ROI for selected Sensing Period
-            ScriptOutput2List("Number of products processed for selected ROI and Sensing Period: " + str(number_processed_products), log_list)
+            main_logger.info("Number of products processed for selected ROI and Sensing Period: " + str(number_processed_products))
             # Products excluded (old format)
-            ScriptOutput2List("Number of products excluded (old format): " + str(number_excluded_products_old_format), log_list)
+            main_logger.info("Number of products excluded (old format): " + str(number_excluded_products_old_format))
             if number_excluded_products_old_format != 0:
                 excluded_products_old_format = "\n".join(excluded_products_old_format)
-                ScriptOutput2List(excluded_products_old_format, log_list)  
+                main_logger.info(excluded_products_old_format)  
             # Products excluded (ROI falls 100% on no data side of partial tile or scene have same sensing time)
-            ScriptOutput2List("Number of products excluded (100% no data or same sensing time): " + str(number_excluded_products_no_data_sensing_time), log_list)
+            main_logger.info("Number of products excluded (100% no data or same sensing time): " + str(number_excluded_products_no_data_sensing_time))
             if number_excluded_products_no_data_sensing_time != 0:
                 excluded_products_no_data_sensing_time = "\n".join(excluded_products_no_data_sensing_time)
-                ScriptOutput2List(excluded_products_no_data_sensing_time, log_list)
-            # Products COAH LTA (product not available for retrieval from LTA)
-            ScriptOutput2List("Number of products not available (COAH Long Term Archive): " + str(number_coah_lta_products), log_list)
-            if number_coah_lta_products != 0:
-                coah_lta_products = "\n".join(coah_lta_products)
-                ScriptOutput2List(coah_lta_products, log_list)
+                main_logger.info(excluded_products_no_data_sensing_time)
             # Corrupted products (some bands or metadata not available during download)
-            ScriptOutput2List("Number of corrupted products: " + str(number_excluded_products_corrupted), log_list)
+            main_logger.info("Number of corrupted products: " + str(number_excluded_products_corrupted))
             if number_excluded_products_corrupted != 0:
                 excluded_products_corrupted = "\n".join(excluded_products_corrupted)
-                ScriptOutput2List(excluded_products_corrupted, log_list)
+                main_logger.info(excluded_products_corrupted)
 
     else:
-        ScriptOutput2List("Processing ignored.\n", log_list)
+        main_logger.info("Processing ignored")
 
 else:
-    print("Failed to pré-start script.\n")
+    print("Failed to pré-start script")
 
 # END ######################################################################################
 
@@ -531,12 +488,9 @@ POS2IDON_timef = time.time()
 # Duration of POS2IDON
 POS2IDON_timep = int(POS2IDON_timef - POS2IDON_time0)
 
-ScriptOutput2List("\nPOS2IDON total time: "+str(POS2IDON_timep)+" seconds.\n", log_list)
+main_logger.info("POS2IDON processing time: " + str(POS2IDON_timep) + " seconds")
 
-# Save log
-ScriptOutputs2LogFile(log_list, "4_LogFile")
-
-print("\nPOS2IDON CLOSED.\n")
+main_logger.info("POS2IDON CLOSED.")
 
 
 
