@@ -7,17 +7,17 @@ Sentinel-2 L1C processing functions for search, download, unzip and atmospheric 
 """
 
 ### Import Libraries ###################################################################################################################
-from sentinelsat import SentinelAPI, geojson_to_wkt
-import time
 import glob
 import os
 import zipfile
 import sys
 from xml.dom import minidom
 import shutil
-import requests
-from dotenv import load_dotenv, set_key
+from tqdm import tqdm
+import time
 from datetime import datetime, timedelta
+from cdsetool.query import query_features
+from cdsetool.credentials import Credentials
 
 # Import FeLS (GitHub clone)
 Basepath = os.getcwd()
@@ -39,16 +39,15 @@ def CollectDownloadLinkofS2L1Cproducts_GC(ROI, SensingPeriod, S2CatalogueFolder,
             S2CatalogueFolder - Folder path where the downloaded Sentinel2 catalogue and metadata will be saved. String.
             OutputFolder - Folder where list of urls will be saved. String.
     Output: List of downloading links in a txt file, if the products exist.
-            LogList - Function's log outputs. List of strings.
+            log_list - Logging messages.
     """
+    # Logging list
+    log_list = []
+
     # Convert SensingPeriod to YYYY-MM-DD
     StartDate = SensingPeriod[0][0:4] + "-" + SensingPeriod[0][4:6] + "-" + SensingPeriod[0][6:8]
     EndDate = SensingPeriod[1][0:4] + "-" + SensingPeriod[1][4:6] + "-" + SensingPeriod[1][6:8]
 
-    # Search Products
-    OutputLog = "Searching Sentinel-2 L1C products download links from Google Cloud based on User Inputs..."
-    LogList = [OutputLog]
-    print(OutputLog)
     # Run FeLS
     # Additional options for Fels
     # 'cloudcover=99', help= set limit for cloud cover, defaul=100
@@ -57,25 +56,16 @@ def CollectDownloadLinkofS2L1Cproducts_GC(ROI, SensingPeriod, S2CatalogueFolder,
     # 'reject_old', help='For S2, skip redundant old-format (before Nov 2016) images', default=False THIS OPTION IN THIS FUNCTION IS NOT CHANGING ANYTHING, THE URL CORRESPONDING TO THE OPER FILE IS STILL COLLECTED!
     urls = fels.run_fels(None, 'S2', StartDate, EndDate, cloudcover=99, geometry=ROI, outputcatalogs=S2CatalogueFolder, excludepartial=False, includeoverlap=True,list=True, dates= False,reject_old=True)
         
-    OutputLog = "Done.\n"
-    LogList.append(OutputLog)
-    print(OutputLog)
     # Print number of products 
     NumberOfProducts = len(urls)
-    OutputLog = str(NumberOfProducts) + " download links collected:"
-    LogList.append(OutputLog)
-    print(OutputLog)
+    log_list.append(str(NumberOfProducts) + " download links collected:\n" + "\n".join(urls) + "\n")
 
-    OutputLog = '\n'.join(urls) + "\n"
     # Save link to txt file
     text_file = open(os.path.join(OutputFolder, "S2L1CProducts_URLs.txt"), "wt")
     text_file.write('\n'.join(urls) + "\n")
     text_file.close()
-
-    LogList.append(OutputLog)
-    print(OutputLog)
     
-    return LogList
+    return log_list
 
 ########################################################################################################################################
 def DownloadTile_from_URL_GC(url,S2L1CproductsFolder):
@@ -84,225 +74,14 @@ def DownloadTile_from_URL_GC(url,S2L1CproductsFolder):
     Input:  url - download link
             S2L1CproductsFolder - Folder path where the products will be saved. String.
     Output: S2L1C products.
-            LogList - Function's log outputs. List of strings.
     """
-    # Download Product
-    SAFEFileName = url.split('/') [-1]
-    OutputLog = "Downloading " + SAFEFileName
-    LogList = [OutputLog]
-    print(OutputLog)
+
     # Run FeLS function
     # 'reject_old', help='For S2, skip redundant old-format (before Nov 2016) images', default=False GIVES ERROR:  [Errno 13] Permission denied: 'C:\\Users\\ANDREA~1\\AppData\\Local\\Temp\\
     sentinel2.get_sentinel2_image(url, outputdir=S2L1CproductsFolder, overwrite=False, partial=False, noinspire=False, reject_old=True)
-        
-    OutputLog = "Done.\n"
-    LogList.append(OutputLog)
-    print(OutputLog)
-    
-    return LogList
-
-########################################################################################################################################
-def CollectDownloadLinkofS2L1Cproducts_COAH(COAHuser, COAHpass, ROI, SensingPeriod, OutputFolder):
-    """
-    This function searches Sentinel-2 Level-1C products based on user parameters from Copernicus Open Access Hub.
-    Input:  COAHuser - Copernicus Open Access Hub user. String.
-            COAHpass - Copernicus Open Access Hub password. String.
-            ROI - Region of Interest according to SentinelHub EO Browser. Dictionary.
-            SensingPeriod - StartDate and EndDate. Tuple of strings as ('YYYYMMDD','YYYYMMDD').
-            OutputFolder - Folder where list of urls will be saved. String.
-    Output: List of downloading links in a txt file, if the products exist.
-            LogList - Function's log outputs. List of strings.
-    """
-    # Connect to API (This url may change in the future)
-    OutputLog = "Connecting to COAH API..."
-    LogList = [OutputLog]
-    print(OutputLog)
-    COAH_API = SentinelAPI(COAHuser, COAHpass, "https://apihub.copernicus.eu/apihub/") 
-    OutputLog = "Done.\n"
-    LogList.append(OutputLog)
-    print(OutputLog)
-
-    # Search Products
-    OutputLog = "Searching for Sentinel-2 L1C products from Copernicus Open Access Hub based on User Inputs..."
-    LogList.append(OutputLog)
-    print(OutputLog)
-    S2L1Cproducts = COAH_API.query(geojson_to_wkt(ROI), date=SensingPeriod, platformname="Sentinel-2", producttype=("S2MSI1C"), cloudcoverpercentage=(0,100))
-    NumberOfProducts = len(S2L1Cproducts.keys())
-    OutputLog = str(NumberOfProducts) + " download links collected:"
-    LogList.append(OutputLog)
-    print(OutputLog)
-
-    urls = []
-    for product in range(len(S2L1Cproducts.keys())):
-        url = (((list(S2L1Cproducts.items()))[product][1])['link'])
-        SAFEFileName = (((list(S2L1Cproducts.items()))[product][1])['title']) + '.SAFE'
-        url_and_SAFEFileName = str(url +'/'+ SAFEFileName)
-        urls.append(url_and_SAFEFileName)
-
-    OutputLog = '\n'.join(urls) + "\n"
-    # Save link to txt file
-    text_file = open(os.path.join(OutputFolder, "S2L1CProducts_URLs.txt"), "wt")
-    text_file.write('\n'.join(urls) + "\n")
-    text_file.close()
-    
-    LogList.append(OutputLog)
-    print(OutputLog)
-
-    return LogList
-
-########################################################################################################################################
-def DownloadTile_from_URL_COAH(COAHuser, COAHpass,url,S2L1CproductsFolder,LTAattempt=1):
-    """
-    This function downloads Sentinel-2 Level-1C products using download link collected from Copernicus Open Access Hub catalogue.
-    Input:  url - download link
-            S2L1CproductsFolder - Folder path where the products will be saved. String.
-    Output: S2L1C products.
-            LogList - Function's log outputs. List of strings.
-    """
-    
-    # Get product ID from url link
-    ProductID = (url.split('/') [-3])[10:46]
-    SAFEFileName = url.split('/') [-1]
-    OutputLog = "Downloading " + SAFEFileName
-    LogList = [OutputLog]
-    print(OutputLog)
-    
-    # Initialize COAH API
-    COAH_API = SentinelAPI(COAHuser, COAHpass, "https://apihub.copernicus.eu/apihub/") 
-    APIstatus = None
-    Attempt = 0
-    while APIstatus is None:
-        try:
-            APIstatus = COAH_API.download(ProductID, directory_path=S2L1CproductsFolder)
-            OutputLog = "Done.\n"
-            LogList.append(OutputLog)
-            print(OutputLog)
-        except Exception as e:
-            OutputLog = str(e)
-            LogList.append(OutputLog)
-            print(OutputLog)
-            # Wait for 60 seconds
-            time.sleep(60)
-            Attempt += 1
-            pass
-        if Attempt == LTAattempt:
-            break
-    
-    # Unzip downloaded .zip folder
-    if os.path.exists("".join(glob.glob(os.path.join(S2L1CproductsFolder, "*.zip"))).replace("\\","/")):
-        OutputLog = "Unzipping Product..."
-        LogList.append(OutputLog)
-        print(OutputLog)
-        with zipfile.ZipFile("".join(glob.glob(os.path.join(S2L1CproductsFolder, "*.zip"))).replace("\\","/"),"r") as ProductZip:
-            ProductZip.extractall(S2L1CproductsFolder)
-        
-        os.remove("".join(glob.glob(os.path.join(S2L1CproductsFolder, "*.zip"))).replace("\\","/"))
-        OutputLog = "Done.\n"
-        LogList.append(OutputLog)
-        print(OutputLog)
-
-    return LogList
 
 #######################################################################################################################################
-def generate_tokens(username, password, refresh_token=None):
-    """
-    This function generates the access and refresh tokens from Copernicus Data Space Ecosystem (CDSE).
-    The access token can be generated using CDSE credentials or refresh token.
-    Input:  username - CDSE user.
-            password - CDSE password.
-            refresh_token - Refresh token. If None, access token will be generated with credentials.
-    Output: access_token - Access token.
-            refresh_token - Refresh token.
-    """
-    try:
-        # Current CDSE url
-        url = 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token'
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-        # Check if refresh token already exists - Code from CDSE documentation
-        if isinstance(refresh_token, str) and (refresh_token != ""):
-            print("Generating access token from refresh token...")
-            payload = {'grant_type': 'refresh_token',
-                       'refresh_token': refresh_token,
-                       'client_id': 'cdse-public'}
-            response = requests.post(url, headers=headers, data=payload)
-            response_code = response.status_code
-            # Check responses for access
-            if response_code == 401:
-                print("401 Unauthorized - Using credentials to generate token.")
-                use_credentials = True
-            elif response_code == 400:
-                print("400 Bad Request - Using credentials to generate token.")
-                use_credentials = True
-            elif response_code == 200:
-                access_token = response.json()['access_token']
-                use_credentials = False
-                print("Done.")
-            else:
-                print(str(response_code) + " - Using credentials to generate token.")
-                use_credentials = True
-        else:
-            use_credentials = True
-        
-        if use_credentials == True:
-            print("Generating access and refresh tokens from credentials...")
-            payload = {'grant_type': 'password',
-                       'username': username,
-                       'password': password,
-                       'client_id': 'cdse-public'}
-            response = requests.post(url, headers=headers, data=payload)
-            response_code = response.status_code
-            # Check responses for access
-            if response_code == 401:
-                print("401 Unauthorized - Check your credentials.")
-                access_token = ""
-                refresh_token = ""
-            elif response_code == 200:
-                access_token = response.json()['access_token']
-                refresh_token = response.json()['refresh_token']
-                print("Done.")
-            elif response_code == 400:
-                print("400 Bad Request - Check your credentials.")
-                access_token = ""
-                refresh_token = ""
-            else:
-                print(response_code)
-                access_token = ""
-                refresh_token = ""
-
-    except Exception as e:
-        print(str(e))
-        access_token = "" 
-        refresh_token = ""
-    print("") 
-
-    return access_token, refresh_token
-
-#######################################################################################################################################
-def save_tokens(access_token, refresh_token, env_path):
-    """
-    This function saves CDSE tokens inside an .env file.
-    Input: access_token - CDSE access token. String.
-           refresh_token - CDSE refresh token. String.
-           env_path - Path to .env file, where the tokens will be saved. String.
-    Output: Tokens saved in .env file.
-    """
-    # Check .env file
-    if not os.path.exists(env_path):
-        with open(env_path, "w") as f:
-            # Write variables
-            f.write('\n\n# CDSE Tokens\n')
-            f.write('CDSE_ACCESS_TOKEN=' + access_token)
-            f.write('\n')
-            f.write('CDSE_REFRESH_TOKEN=' + refresh_token)
-            f.write('\n\n')
-    else:
-        load_dotenv(env_path)
-        set_key(env_path, "CDSE_ACCESS_TOKEN", access_token)
-        set_key(env_path, "CDSE_REFRESH_TOKEN", refresh_token)
-
-#######################################################################################################################################
-def collect_s2l1c_CDSE(roi, sensing_period, output_folder):
+def collect_s2l1c_cdse(roi, sensing_period, output_folder):
     """
     This function searches Sentinel-2 Level-1C products based on user parameters from 
     Copernicus Data Space Ecosystem (CDSE). The IDs and Names of products are collected 
@@ -311,84 +90,103 @@ def collect_s2l1c_CDSE(roi, sensing_period, output_folder):
             sensing_period - StartDate and EndDate. Tuple of strings as ('YYYYMMDD','YYYYMMDD').
             output_folder - Folder where list of IDs and Names will be saved. String.
     Output: List of collected products in a txt file.
+            log_list - Logging messages.
     """
-    # CDSE base url - Might change in the future
-    base_url = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products"
-    
-    # ROI
+    # Logging list
+    log_list = []
+
+    # Dictionary ROI to POLYGON
     polygon_0 = str(tuple([item for sublist in roi["coordinates"][0] for item in sublist]))
-    polygon = ",".join([f"{a}{b}" for a, b in zip(polygon_0.split(",")[0::2], polygon_0.split(",")[1::2])])
+    polygon_1 = ",".join([f"{a}{b}" for a, b in zip(polygon_0.split(",")[0::2], polygon_0.split(",")[1::2])])
+    polygon = f"POLYGON({polygon_1})"
 
     # Sensing Period
     start_date_in = datetime.strptime(sensing_period[0], "%Y%m%d") 
     start_date = start_date_in.strftime("%Y-%m-%d")
-    end_date_plus1 = datetime.strptime(sensing_period[1], "%Y%m%d") + timedelta(days=1)
-    end_date = end_date_plus1.strftime("%Y-%m-%d")
+    end_date_in = datetime.strptime(sensing_period[1], "%Y%m%d")
+    end_date = end_date_in.strftime("%Y-%m-%d")
+    # Add 1 day to end if start=end
+    if start_date == end_date:
+        end_date_in = datetime.strptime(sensing_period[1], "%Y%m%d") + timedelta(days=1)
+        end_date = end_date_in.strftime("%Y-%m-%d")
 
     # Search products
-    print("Searching for Sentinel-2 L1C products on Copernicus Data Space Ecosystem...")
-    url = base_url + "?$filter=Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq 'S2MSI1C') and ContentDate/Start ge {start_date}T00:00:00.000Z and ContentDate/End le {end_date}T00:00:00.000Z and OData.CSC.Intersects(area=geography'SRID=4326;POLYGON({polygon})')".format(start_date=start_date, end_date=end_date, polygon=polygon)
-    response = requests.get(url)
-    response_code = response.status_code
-    if response_code in (200, 308):
-        response_values = response.json()['value']
-        if len(response_values) != 0:
-            print("Found " + str(len(response_values)) + " products.")
-            products_list = []
-            for i in response_values:
-                url_safe = base_url + "(" + i["Id"] + ")/$value/" + str(i["Name"])
-                products_list.append(url_safe)    
-        else:
-            print("No products found.")
-            products_list = []
-    else:
-        print("Response: " + str(response_code))
+    try:
+        features = query_features("Sentinel2", {"geometry": polygon, "startDate": start_date, "completionDate": end_date, "processingLevel": "S2MSI1C"})
+        products_list = []
+        for feature in features:
+            safe_name = feature.get("properties").get("title")
+            url = feature.get("properties").get("services").get("download").get("url")
+            url_safe = os.path.join(url, safe_name)
+            products_list.append(url_safe)
+        # Number of products available
+        products_number = len(products_list)
+        log_list.append(str(products_number) + " download links collected:\n" + "\n".join(products_list) + "\n")
+    except Exception as e:
+        products_list = []
+        log_list.append("No products available: " + str(e))
 
     # Save to text file
     text_file = open(os.path.join(output_folder, "S2L1CProducts_URLs.txt"), "wt")
     text_file.write('\n'.join(products_list) + "\n")
-    text_file.close()
-    print("")
+    text_file.close() 
+
+    return log_list
 
 #######################################################################################################################################
-def download_s2l1c_CDSE(access_token, url_safe, output_folder):
+def download_s2l1c_cdse(cdse_user, cdse_pass, url_safe, output_folder):
     """
     This function downloads a Sentinel-2 Level-1C product using a download link collected from 
     Copernicus Data Space Ecosystem (CDSE).
-    Input: access_token - Access token that gives permission to download.
-           url_safe - product download link together with SAFE product name.
+    Input: cdse_user, cdse_pass - CDSE credentials as string.
+           url_safe - Product download link together with SAFE product name.
            output_folder - Folder path where the products will be saved. String.
     Output: Download of S2L1C product.
+            log_list - Logging messages.
     """
-    # Split url
-    safe_file_name = url_safe.split('/')[-1]
-    url = url_safe.replace("/"+safe_file_name,"")
-    product_path = os.path.join(output_folder, safe_file_name[:-4]+".zip")
+    # Logging list
+    log_list = []
 
-    # Download
-    print("Downloading " + safe_file_name +"...")
-    session = requests.Session()
-    session.headers.update({'Authorization': 'Bearer {}'.format(access_token)})
-    response = session.get(url, allow_redirects=False)
-    while response.status_code in (301, 302, 303, 307):
-        url = response.headers['Location']
-        response = session.get(url, allow_redirects=False)
+    # Split url and SAFE name
+    safe_name = url_safe.split('/')[-1]
+    url = url_safe.replace("/"+safe_name,"")
+    product_path = os.path.join(output_folder, safe_name[:-4]+"zip")
 
-    if response.status_code in (200, 308):
-        file = session.get(url, verify=True, allow_redirects=True)
-        with open(product_path, 'wb') as f:
-           f.write(file.content)
-        print("Done.")
-    else:
-        print("Unable to download. Response: " + str(response.status_code))
+    try:
+        # Init session with credentials
+        credentials = Credentials(cdse_user, cdse_pass)
+        session = credentials.get_session()
 
-    # Unzip
-    if os.path.exists(product_path):
-        with zipfile.ZipFile(product_path) as product_zip:
-            product_zip.extractall(output_folder)
-        # Delete zip
-        os.remove(product_path)
-    print("")
+        # Source: CDSETool
+        response = session.head(url, allow_redirects=False)
+        while response.status_code in range(300, 400):
+            url = response.headers["Location"]
+            response = session.head(url, allow_redirects=False)
+
+        response = session.get(url, stream=True)
+        while response.status_code != 200:
+            time.sleep(5)
+            response = session.get(url, stream=True)
+
+        # Download
+        content_length = int(response.headers["Content-Length"])
+        chunk_size = 1024
+        with open(product_path, "wb") as file:
+            with tqdm(total=content_length, unit='B', unit_scale=True) as pbar:
+                for data in response.iter_content(chunk_size):
+                    pbar.update(len(data))
+                    file.write(data)
+
+        # Unzip
+        if os.path.exists(product_path):
+            with zipfile.ZipFile(product_path) as product_zip:
+                product_zip.extractall(output_folder)
+            # Delete zip
+            os.remove(product_path)
+    except Exception as e:
+        log_list.append("Unable to download: " + str(e))
+
+    return log_list
 
 #######################################################################################################################################
 def ACacolite(FilesToAC, OutputFolder, EDuser, EDpass, ROI):
@@ -448,8 +246,13 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
     """
     This function delets unnecessary files and organizes the rest into folders.
     Input: AcoliteFolder - Path to the folder containing the processed ACOLITE bands. String.
-    Output: Flags files are deleted, bands are organized into folders and sub-folders according to product name. Band names are changed.Surface reflectances bands organized in sub-folder. Stacks tif bands into a single tif
+    Output: Flags files are deleted, bands are organized into folders and sub-folders according to product name. 
+            Band names are changed.Surface reflectances bands organized in sub-folder. Stacks tif bands into a single tif.
+            log_list - Logging messages.
     """
+    # Logging list
+    log_list = []
+
     # Delete unnecessary flags files in output folder
     ListOfACOLITEflagsPaths = glob.glob(os.path.join(AcoliteFolder, "*flags.tif"))
     for FlagsFile in ListOfACOLITEflagsPaths:
@@ -459,12 +262,10 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
         os.remove(PNGtoDelete)
 
     # Organize into folders
-    LogList = ['']
     ListOfACOLITEfilePaths = glob.glob(os.path.join(AcoliteFolder, "*.tif"))
     #Through message if the ROI falls 100% on the no data side of the partial tile.
     if len(ListOfACOLITEfilePaths) == 0:
-        OutputLog = "ROI falls 100% on the no data side of the partial tile. Product excluded."
-        LogList = [OutputLog]
+        log_list.append("ROI falls 100% on the no data side of the partial tile. Product excluded")
         #deleting unnecessary original products files from S2L1CproductsFolder 
         ProductToDelete=os.path.join(S2L1CproductsFolder,SAFEFileName)
         shutil.rmtree(ProductToDelete)
@@ -483,8 +284,7 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
 
         #Avoid overwrite of results by ACOLITE for products with same SENSING TIME
         if os.path.exists(os.path.join(AcoliteFolder, ACOLITEProductFolderName)):
-            OutputLog = "Product with same sensing time. Overwrite avoided. Product excluded."
-            LogList = [OutputLog]
+            log_list.append("Product with same sensing time. Overwrite avoided. Product excluded")
             # deleting unnecessary acolite products from ACOLITEproductsFolder
             for ACOLITEfiletoDelete in glob.glob(os.path.join(AcoliteFolder, "*.tif")): 
                 os.remove(ACOLITEfiletoDelete)
@@ -550,7 +350,7 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
             with open(os.path.join(ACOLITEProductFolder, "Info.txt"), "w") as text_file:
                 text_file.write(SAFEFileName)
                 
-    return LogList
+    return log_list
            
 #######################################################################################################################################
 def Extract_ACOLITE_name_from_SAFE(SAFEProductFile):
@@ -572,5 +372,108 @@ def Extract_ACOLITE_name_from_SAFE(SAFEProductFile):
     ACOLITESAFEname = FileNameSplitted[0] + "_" + Sensor[0:3] + "_" + Date[0:4]+ "_" + Date[4:6]+ "_" + Date[6:8] + "_" + SensingTime[11:13] + "_" + SensingTime[14:16] + "_" + SensingTime[17:19] + "_" + FileNameSplitted[5]
             
     return ACOLITESAFEname
+
 #######################################################################################################################################
+# [Discontinued]
+# def CollectDownloadLinkofS2L1Cproducts_COAH(COAHuser, COAHpass, ROI, SensingPeriod, OutputFolder):
+#     """
+#     This function searches Sentinel-2 Level-1C products based on user parameters from Copernicus Open Access Hub.
+#     Input:  COAHuser - Copernicus Open Access Hub user. String.
+#             COAHpass - Copernicus Open Access Hub password. String.
+#             ROI - Region of Interest according to SentinelHub EO Browser. Dictionary.
+#             SensingPeriod - StartDate and EndDate. Tuple of strings as ('YYYYMMDD','YYYYMMDD').
+#             OutputFolder - Folder where list of urls will be saved. String.
+#     Output: List of downloading links in a txt file, if the products exist.
+#             LogList - Function's log outputs. List of strings.
+#     """
+#     # Connect to API (This url may change in the future)
+#     OutputLog = "Connecting to COAH API..."
+#     LogList = [OutputLog]
+#     print(OutputLog)
+#     COAH_API = SentinelAPI(COAHuser, COAHpass, "https://apihub.copernicus.eu/apihub/") 
+#     OutputLog = "Done.\n"
+#     LogList.append(OutputLog)
+#     print(OutputLog)
+
+#     # Search Products
+#     OutputLog = "Searching for Sentinel-2 L1C products from Copernicus Open Access Hub based on User Inputs..."
+#     LogList.append(OutputLog)
+#     print(OutputLog)
+#     S2L1Cproducts = COAH_API.query(geojson_to_wkt(ROI), date=SensingPeriod, platformname="Sentinel-2", producttype=("S2MSI1C"), cloudcoverpercentage=(0,100))
+#     NumberOfProducts = len(S2L1Cproducts.keys())
+#     OutputLog = str(NumberOfProducts) + " download links collected:"
+#     LogList.append(OutputLog)
+#     print(OutputLog)
+
+#     urls = []
+#     for product in range(len(S2L1Cproducts.keys())):
+#         url = (((list(S2L1Cproducts.items()))[product][1])['link'])
+#         SAFEFileName = (((list(S2L1Cproducts.items()))[product][1])['title']) + '.SAFE'
+#         url_and_SAFEFileName = str(url +'/'+ SAFEFileName)
+#         urls.append(url_and_SAFEFileName)
+
+#     OutputLog = '\n'.join(urls) + "\n"
+#     # Save link to txt file
+#     text_file = open(os.path.join(OutputFolder, "S2L1CProducts_URLs.txt"), "wt")
+#     text_file.write('\n'.join(urls) + "\n")
+#     text_file.close()
+    
+#     LogList.append(OutputLog)
+#     print(OutputLog)
+
+#     return LogList
+
+########################################################################################################################################
+# [Discontinued]
+# def DownloadTile_from_URL_COAH(COAHuser, COAHpass,url,S2L1CproductsFolder,LTAattempt=1):
+#     """
+#     This function downloads Sentinel-2 Level-1C products using download link collected from Copernicus Open Access Hub catalogue.
+#     Input:  url - download link
+#             S2L1CproductsFolder - Folder path where the products will be saved. String.
+#     Output: S2L1C products.
+#             LogList - Function's log outputs. List of strings.
+#     """
+    
+#     # Get product ID from url link
+#     ProductID = (url.split('/') [-3])[10:46]
+#     SAFEFileName = url.split('/') [-1]
+#     OutputLog = "Downloading " + SAFEFileName
+#     LogList = [OutputLog]
+#     print(OutputLog)
+    
+#     # Initialize COAH API
+#     COAH_API = SentinelAPI(COAHuser, COAHpass, "https://apihub.copernicus.eu/apihub/") 
+#     APIstatus = None
+#     Attempt = 0
+#     while APIstatus is None:
+#         try:
+#             APIstatus = COAH_API.download(ProductID, directory_path=S2L1CproductsFolder)
+#             OutputLog = "Done.\n"
+#             LogList.append(OutputLog)
+#             print(OutputLog)
+#         except Exception as e:
+#             OutputLog = str(e)
+#             LogList.append(OutputLog)
+#             print(OutputLog)
+#             # Wait for 60 seconds
+#             time.sleep(60)
+#             Attempt += 1
+#             pass
+#         if Attempt == LTAattempt:
+#             break
+    
+#     # Unzip downloaded .zip folder
+#     if os.path.exists("".join(glob.glob(os.path.join(S2L1CproductsFolder, "*.zip"))).replace("\\","/")):
+#         OutputLog = "Unzipping Product..."
+#         LogList.append(OutputLog)
+#         print(OutputLog)
+#         with zipfile.ZipFile("".join(glob.glob(os.path.join(S2L1CproductsFolder, "*.zip"))).replace("\\","/"),"r") as ProductZip:
+#             ProductZip.extractall(S2L1CproductsFolder)
+        
+#         os.remove("".join(glob.glob(os.path.join(S2L1CproductsFolder, "*.zip"))).replace("\\","/"))
+#         OutputLog = "Done.\n"
+#         LogList.append(OutputLog)
+#         print(OutputLog)
+
+#     return LogList
 

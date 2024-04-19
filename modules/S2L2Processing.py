@@ -110,12 +110,11 @@ def Download_WorldCoverMaps(TerraScopeCredentials, SboxGeometry, ProcessingFolde
     Input: TerraScopeCredentials - TerraScope login info as list of strings [username, password].
            SboxGeometry - Shapely box geometry created with EPSG4326 bounds, this represents the Area of Interest. 
            ProcessingFolder - Folder path where the WorldCover maps will be placed.
-    Output: LogList - Function's log outputs. List of strings.
+    Output: log_list - Logging messages.
             NonExistTile - Flag to inform if the user is trying to download a non-existing tile. Boolean.
     """
-    OutputLog = ""
-    LogList = [OutputLog]
-    print(OutputLog)
+    # Logging list
+    log_list = []
 
     # Initiate TerraScope catalogue
     catalogue = Catalogue()
@@ -129,25 +128,16 @@ def Download_WorldCoverMaps(TerraScopeCredentials, SboxGeometry, ProcessingFolde
         # Authentication and download
         catalogue.authenticate_non_interactive(username=TerraScopeCredentials[0], password=TerraScopeCredentials[1])
         TileName = str(product.title)
-        OutputLog = "Downloading: " + TileName
-        LogList.append(OutputLog)
-        print(OutputLog)
+        log_list.append("Downloaded: " + TileName)
         if not os.path.exists(os.path.join(ProcessingFolder, TileName+"_Map.tif")):
             catalogue.download_file(product.data[0], ProcessingFolder)
-            OutputLog = "Done."
-            LogList.append(OutputLog)
-            print(OutputLog)
         else:
-            OutputLog = "Ignoring download, since tile already exists."
-            LogList.append(OutputLog)
-            print(OutputLog)
+            log_list.append("Ignored download, since tile already exists")
 
     # In the middle of the ocean there are no worldcover tiles to download, when trying to download one of those non-existing tiles
     # the API doesn't return any status. Here, if the script doesnt enter the for loop is because it is a non-existing tile in the 
     # middle of the ocean, so we output a flag.
     if NonExistTile == True:
-        OutputLog = "Trying to download a non-existing tile in the middle of the ocean."
-        LogList.append(OutputLog)
-        print(OutputLog)
+        log_list.append("Tried to download a non-existing tile in the middle of the ocean")
 
-    return LogList, NonExistTile
+    return log_list, NonExistTile

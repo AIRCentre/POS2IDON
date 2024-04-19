@@ -14,7 +14,14 @@ configs/*.sqlite
 2_Masked_Products/*
 2-1_ESA_Worldcover/*
 3_Classification_Results/*
-4_LogFile/*
+4_logfile.log
+
+# Ignore other files and files
+modules/Post_Processing.py
+visualization_cube.py
+climatology_cube.py
+4_Post_Processing_Results/*
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,dotenv

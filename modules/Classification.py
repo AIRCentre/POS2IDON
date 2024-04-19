@@ -25,7 +25,6 @@ from juliacall import Main as jl
 
 ### Import Defined Functions ###########################################################################################
 from modules.unet import UNet
-from modules.PreStart import ScriptOutput2List
 from modules.Auxiliar import CreateBrandNewFolder
 
 ########################################################################################################################
@@ -157,6 +156,8 @@ def rfxgb_prediction(model, output_folder, image_name, img, img_shape, global_pr
     """
     This function uses RF or XGBoost to predict one or more images.
     """
+
+    # Logging list
     log_list = []
 
     # Structure of zero dataframe to store results
@@ -170,7 +171,7 @@ def rfxgb_prediction(model, output_folder, image_name, img, img_shape, global_pr
     # A calculation between available data for prediction (without NaNs) and total data can be done here to only consider a percentage of more than 80% 
     if len(no_nans_predict_df.index) == 0:
         if ignore_log == False:
-            ScriptOutput2List("Classification ignored, no dataframe without NaNs to predict.", log_list)
+            log_list.append("Classification ignored, no dataframe without NaNs to predict")
         predict_results_flat = np.array(predict_results_struct_df).flatten()
         predict_results_reshape = predict_results_flat.reshape(img_shape)
         # Classes probability
@@ -182,7 +183,7 @@ def rfxgb_prediction(model, output_folder, image_name, img, img_shape, global_pr
 
     else:
         if ignore_log == False:
-            ScriptOutput2List("Dataframe with no NaNs of shape " + str(no_nans_predict_df.shape) + ".", log_list)
+            log_list.append("Dataframe with no NaNs of shape " + str(no_nans_predict_df.shape))
         # Prediction
         if classification_options["ml_algorithm"] == "xgb":
             predict_results_0 = model.predict(no_nans_predict_df)
@@ -353,12 +354,14 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
                                     "ml_algorithm" - 'rf' for Random Forest.
                                                      'xgb' for XGBoost.
                                                      'unet' for Unet.
-    Output: log_list - Function's log outputs. List of strings. 
+    Output: log_list - Logging messages.
             Scene Classification maps as TIF.
             Class probability maps as TIF (optional).
     """
-    ptime_0 = time.time()
+    # Logging list
     log_list = []
+
+    classiftime_0 = time.time()
 
     # Create folders to save maps
     # Create sc_maps folder
@@ -367,19 +370,18 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
     CreateBrandNewFolder(os.path.join(output_folder, "proba_maps")) 
 
     # Load model, must be done outside loop to save time
-    ScriptOutput2List("Loading ML model...", log_list)
     model, device, mean_bands, std_bands = load_ml_model(classification_options["model_path"], classification_options)
-    ScriptOutput2List("Model loaded.\n", log_list)
+    log_list.append("Model loaded")
 
     # Check folder TIFs
     tifs_list = glob.glob(os.path.join(input_folder, "*.tif"))
-    ScriptOutput2List("Classification of " + str(len(tifs_list)) + " images.\n", log_list)
+    log_list.append("Classification of " + str(len(tifs_list)) + " images")
     if len(tifs_list) > 0:
         ignore_log = True
 
     # Random Forest
     if classification_options["ml_algorithm"] == "rf":
-        ScriptOutput2List("Performing classification with Random Forest...", log_list)
+        log_list.append("Performed classification with Random Forest")
         # Cycle each TIF
         for image in tifs_list:
             image_name = os.path.basename(image)[:-4]+"_rf"
@@ -391,7 +393,7 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
         
     # XGBoost
     elif classification_options["ml_algorithm"] == "xgb":
-        ScriptOutput2List("Performing classification with XGBoost...", log_list)
+        log_list.append("Performed classification with XGBoost")
         # Cycle each TIF
         for image in tifs_list:
             image_name = os.path.basename(image)[:-4]+"_xgb"
@@ -405,7 +407,7 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
     elif classification_options["ml_algorithm"] == "unet":
         # Julia
         if len(glob.glob(os.path.join(classification_options["model_path"], "*.bson"))) != 0:
-            ScriptOutput2List("Performing classification with Julia Unet...", log_list)
+            log_list.append("Performed classification with Julia Unet")
             # Cycle each TIF
             for image in tifs_list:
                 image_name = os.path.basename(image)[:-4]
@@ -415,7 +417,7 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
                 unet_prediction_julia(device, model, mean_bands, std_bands, output_folder, image_name, img, meta, tags, dtype, classification_options)
         # Python
         else: 
-            ScriptOutput2List("Performing classification with Unet...", log_list)
+            log_list.append("Performed classification with Unet")
             # Cycle each TIF
             for image in tifs_list:
                 image_name = os.path.basename(image)[:-4]
@@ -425,13 +427,14 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
                 unet_prediction(device, model, output_folder, image_name, img, meta, tags, dtype, classification_options)      
     # Other
     else:
-        ScriptOutput2List("Machine Learning algorithm option not defined.", log_list)
+        log_list.append("Machine Learning algorithm option not defined.")
 
-    ptime_f = time.time()
-    ptime = int(ptime_f - ptime_0)
-    ScriptOutput2List("Done. Classification time with all steps: " + str(ptime) + " seconds.\n", log_list)
+    classiftime_f = time.time()
+    classiftime = int(classiftime_f - classiftime_0)
+    log_list.append("Total classification time: " + str(classiftime) + " seconds")
 
-    return log_list  
+    return log_list
+
 
 
 
