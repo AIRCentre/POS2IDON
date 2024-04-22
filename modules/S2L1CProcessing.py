@@ -117,7 +117,7 @@ def collect_s2l1c_cdse(roi, sensing_period, output_folder):
         for feature in features:
             safe_name = feature.get("properties").get("title")
             url = feature.get("properties").get("services").get("download").get("url")
-            url_safe = os.path.join(url, safe_name)
+            url_safe = url + '/' + safe_name
             products_list.append(url_safe)
         # Number of products available
         products_number = len(products_list)
