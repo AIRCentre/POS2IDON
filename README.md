@@ -58,7 +58,7 @@ To run the Unet classification step in Julia with models trained with FLUX.jl yo
 
 1- Run POS2IDON selecting in User Inputs a model in `.bson` format. The first time you run it `julicall` will install the latest version of Julia;
 
-2- In Windows. open Environment Variables and add the full path to the julia binary located at `.../envs/pos2idon-env/julia_env/pyjuliapkg/install/bin`;
+2- In Windows. open Environment Variables and add the full path to the julia binary folder located in the conda environment folder at `C:/users/../anaconda/envs/pos2idon-env/julia_env/pyjuliapkg/install/bin`;
 
 4- Open a terminal inside the POS2IDON Julia environment, usually it is inside conda environments folder `envs/pos2idon-env/julia_env` folder and type `julia`;
 
