@@ -20,8 +20,6 @@ from hummingbird.ml import load
 import torch
 import torchvision.transforms as transforms
 import time
-# Comment if Julia is giving you problems
-from juliacall import Main as jl
 
 ### Import Defined Functions ###########################################################################################
 from modules.unet import UNet
@@ -60,6 +58,7 @@ def load_ml_model(model_folder, classification_options):
         # Julia
         if len(glob.glob(os.path.join(model_folder, "*.bson"))) != 0:
             # import julia functions
+            from juliacall import Main as jl
             jl.include("modules/Classification.jl")
             device, model, mean_bands, std_bands = jl.Load_Julia_Model(model_folder)
         # Python
@@ -310,6 +309,7 @@ def unet_prediction_julia(device, model, mean_bands, std_bands, output_folder, i
 
     # Update meta to reflect the number of layers
     meta.update(count = 1)
+    from juliacall import Main as jl
     logits = jl.Classification_Julia(device, img, model, mean_bands, std_bands)
     logits = np.asarray(logits)
     # Convert the array to a PyTorch tensor
