@@ -6,10 +6,10 @@
 
 
 # # import packages
-# using Flux
-# using BSON
-# using Glob
-# using CUDA
+using Flux
+using BSON
+using Glob
+using CUDA
 
 # println(CUDA.functional())
 # println(Flux.GPU_BACKEND)
