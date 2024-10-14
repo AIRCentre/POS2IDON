@@ -28,18 +28,18 @@ except Exception as e:
 
 # Julia packages - Install manually inside the juliacall environemnt
 # pos2idon-env -> julia_env -> open terminal -> Julia REPL -> enter Pkg ] -> activate . -> add Package
-try:
-    main_logger.info("Importing Julia packages (must be installed in the juliacall environment)")
-    from juliacall import Main as jl
-    jl.seval("using Flux") #add
-    jl.seval("using BSON") #add
-    jl.seval("using Glob") #add
-    jl.seval("using Base.Threads")
-    jl.seval("using CUDA") #add
-    julia_packages_flag = 1
-except Exception as e:
-    main_logger.info(str(e))
-    julia_packages_flag = 0
+# try:
+#     main_logger.info("Importing Julia packages (must be installed in the juliacall environment)")
+#     from juliacall import Main as jl
+#     jl.seval("using Flux") #add
+#     jl.seval("using BSON") #add
+#     jl.seval("using Glob") #add
+#     jl.seval("using Base.Threads")
+#     jl.seval("using CUDA") #add
+#     julia_packages_flag = 1
+# except Exception as e:
+#     main_logger.info(str(e))
+#     julia_packages_flag = 0
 
 # Import defined modules
 try:
@@ -109,8 +109,8 @@ except Exception as e:
     main_logger.info(str(e))
     credentials_flag = 0
 
-pre_start_flag = julia_packages_flag * logging_flag * clone_flag * \
-    libraries_flag * modules_flag * inputs_flag * credentials_flag
+pre_start_flag = logging_flag * clone_flag * \
+    libraries_flag * modules_flag * inputs_flag * credentials_flag # julia_packages_flag * 
 
 ############################################################################################ 
 # Start POS2IDON main processing time
