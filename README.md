@@ -54,18 +54,18 @@ pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
 
 ### Julia
 
-To run the Unet classification step in Julia with models trained with FLUX.jl you need Julia installed and added to PATH (the code is tested with julia version 1.11.0). If already installed check your version before proceeding and eventually upgrade it. Download [here](https://julialang.org/downloads/); (the code is tested with julia version 1.11.0).
+To run the Unet classification step in Julia with models trained with FLUX.jl you need Julia installed and added to PATH. If already installed check your version before proceeding and eventually upgrade it. Download [here](https://julialang.org/downloads/); (the code is tested with Julia version 1.11.0). If not already installed installed:
 
-2- Run POS2IDON, the first time you run it `julicall` will install the latest version of Julia;
+1- Run POS2IDON selecting in User Inputs a model in `.bson`, the first time you run it `julicall` will install the latest version of Julia;
 
-3- Locate your POS2IDON Julia environment, usually it is inside conda envs `pos2idon-env/julia_env` folder (macOS) or the base Julia `environments/pyjuliapkg` folder (Windows);
+2- in Windows add to PATH in the Environment Variables the julia binary located in `.../envs/pos2idon-env/julia_env/pyjuliapkg/install/bin`
 
-4- Open a terminal inside one of those folders and type `julia`;
+4- Open a terminal inside the POS2IDON Julia environment, usually it is inside conda environments folder `envs/pos2idon-env/julia_env` folder and type `julia`;
 
 5- Type `]` and write: 
 ```
 activate .
-add Flux BSON Glob CUDA cuDNN
+add Flux@v0.14.16 BSON@v0.3.9 Glob@v1.3.1 CUDA@v5.5.2 cuDNN@v1.4.0
 ``` 
 
 6- Run POS2IDON again.
