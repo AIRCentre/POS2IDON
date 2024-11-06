@@ -410,7 +410,8 @@ if pre_start_flag == 1:
                                     else:
                                         final_mosaic_name = masked_file_name + "_" + classification_options["ml_algorithm"] + "-"
                                         mosaic_patches(proba_maps_folder, proba_maps_folder, final_mosaic_name+"probamap")
-                            else: 
+                            else:
+                                Create_Nan_Mask(ac_product, masks_folder)
                                 main_logger.info("Mosaic ignored")
 
                             # Copy info text file
