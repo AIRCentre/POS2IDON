@@ -145,19 +145,20 @@ def input_checker():
         log_list.append("'classification' is not boolean.")
 
     if isinstance(classification_options, dict):
-        if len(classification_options) == 10:
+        # 10 keys, plus the optional "export_feather"
+        if len(classification_options) == 10 + ("export_feather" in classification_options):
             if isinstance(classification_options["split_and_mosaic"], bool) and isinstance(classification_options["classification_probabilities"], bool) and\
                 isinstance(classification_options["ml_algorithm"], str) and isinstance(classification_options["model_path"], str) and\
                 isinstance(classification_options["n_classes"], int) and isinstance(classification_options["features"], tuple) and\
                 isinstance(classification_options["n_hchannels"], int) and isinstance(classification_options["features_mean"], list) and\
-                isinstance(classification_options["features_std"], list):
+                isinstance(classification_options["features_std"], list) and isinstance(classification_options.get("export_feather", False), bool):
                 inputs_flag = inputs_flag*1
             else:
                 inputs_flag = inputs_flag*0
                 log_list.append("'classification_options' has incorrect values.")
         else:
             inputs_flag = inputs_flag*0
-            log_list.append("'classification_options' does not have dimension 10.")
+            log_list.append("'classification_options' does not have dimension 10 (or 11 with 'export_feather').")
     else:
         inputs_flag = inputs_flag*0
         log_list.append("'classification_options' is not dictionary.")
@@ -234,8 +235,10 @@ def git_clone_acolite_fels(save_dir):
     log_list = []
 
     # ZIP urls
-    acolite_zip_url = "https://github.com/acolite/acolite/archive/refs/tags/20231023.0.zip"
-    acolite_name = "acolite-main"
+    # ACOLITE 20260421.0 supports Sentinel-2A, 2B and 2C
+    acolite_version = "20260421.0"
+    acolite_zip_url = "https://github.com/acolite/acolite/archive/refs/tags/" + acolite_version + ".zip"
+    acolite_name = "acolite-20260421"
     fels_zip_url = "https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud/archive/master.zip"
     fels_name = "fetchLandsatSentinelFromGoogleCloud-master"
 
@@ -253,8 +256,8 @@ def git_clone_acolite_fels(save_dir):
                 acolite_zip.extractall(save_dir)
             os.remove(acolite_path+".zip")
 
-            # Rename from acolite-version to acolite-main
-            acolite_freshly_path = glob.glob(os.path.join(save_dir, "acolite-*"))[0]
+            # Rename from acolite-version to acolite_name
+            acolite_freshly_path = os.path.join(save_dir, "acolite-" + acolite_version)
             os.rename(acolite_freshly_path, acolite_path)
 
         except Exception as e:
@@ -316,6 +319,23 @@ def delete_file(file_path):
     # Check if file exists
     if os.path.exists(file_path):
         os.remove(file_path)
+
+#################################################################################################
+def link_or_copy(src_path, dst_path):
+    """
+    This function makes dst_path a hard link to src_path (same file on disk, no extra space).
+    If a hard link is not possible (e.g. different disks), the file is copied.
+    Deleting one of the two names does not delete the other.
+    Input: src_path - Existing file.
+           dst_path - New file name.
+    Output: Hard link or copy of the file.
+    """
+    if os.path.exists(dst_path):
+        os.remove(dst_path)
+    try:
+        os.link(src_path, dst_path)
+    except OSError:
+        shutil.copy(src_path, dst_path)
 
 #################################################################################################
 def NearRealTimeSensingDate():

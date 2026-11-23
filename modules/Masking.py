@@ -14,6 +14,7 @@ from scipy import ndimage
 from s2cloudless import S2PixelCloudDetector
 import numpy as np
 import rasterio
+from rasterio.windows import Window
 #from xml.dom import minidom
 #from rasterio.warp import reproject, Resampling
 from scipy.ndimage import minimum_filter
@@ -21,6 +22,9 @@ from scipy.ndimage import minimum_filter
 # Import other Functions ##########################################################################################################
 from modules.SpectralIndices import CalculateNormalizedIndexTif
 from modules.Auxiliar import GenerateTifPaths
+
+# Number of image rows processed at once by s2cloudless (limits memory use on full Sentinel-2 tiles)
+S2CL_BLOCK_ROWS = 1024
 
 #######################################################################################################################################
 def Create_Mask_fromWCMaps(MaskProduct, WorldCoverMapsFolder, DstEPSG, Bounds, SpatialRes, WCnonExistTile, BufferSize=0):
@@ -287,32 +291,37 @@ def CloudMasking_S2CloudLess_ROI_10m(ac_product_folder, MaskingProductFolder, S2
     ac_product_name = os.path.basename(ac_product_folder)
 
     with rasterio.open(ReferenceImage) as scl:
-        _ = scl.read()
         aff = scl.transform
         crs = scl.crs
-    
+        Height = scl.height
+        Width = scl.width
+
     # List of images (rhot) to process (ordered): B01,B02,B04,B05,B08,B8A,B09,B10,B11,B12.
     ListofImages_rhot = []
     SortingPattern = ['rhot_B01','rhot_B02','rhot_B04','rhot_B05','rhot_B08','rhot_B8A','rhot_B09','rhot_B10','rhot_B11','rhot_B12']
     for band_rhot in SortingPattern:
         ListofImages_rhot.append(os.path.join(ac_product_folder, 'Top_Atmosphere_Bands', band_rhot  + '.tif'))
+    ListofBands = [gdal.Open(band_rhot) for band_rhot in ListofImages_rhot]
 
-    # Create an array for each band
-    ListofBandsArray = []
-    for band_rhot in ListofImages_rhot:
-        Band = gdal.Open(band_rhot)
-        BandArray = np.array(Band.GetRasterBand(1).ReadAsArray())
-        ListofBandsArray.append(BandArray) 
-    # Create a list of arrays
-    Bands = np.array([np.dstack(ListofBandsArray)])
-    # Apply s2cloudless algorithm
+    # s2cloudless algorithm
     Cloud_Detector = S2PixelCloudDetector(threshold=S2CL_Threshold, average_over=S2CL_Average, dilation_size=S2CL_Dilation) # To process on all 13 bands add: all_bands=True
-    # Cloud_Probs = Cloud_Detector.get_cloud_probability_maps(Bands)
-    Mask = Cloud_Detector.get_cloud_masks(Bands).astype(rasterio.uint8)
-    # Write output cloud mask 
+    # Rows added above and below each block, so that averaging and dilation give the same result as on the full image
+    Margin = S2CL_Average + S2CL_Dilation + 1
+
+    # Apply s2cloudless by blocks of rows and write output cloud mask
     tif_out_image = os.path.join(MaskingProductFolder, ac_product_name+'_CLOUD_Mask_10m.tif')
-    with rasterio.open(tif_out_image, "w",  driver='GTiff', compress="lzw", height=Mask.shape[1], width=Mask.shape[2], count=1, dtype=rasterio.uint8, transform=aff, crs=crs) as dest:
-        dest.write(Mask)
+    with rasterio.open(tif_out_image, "w",  driver='GTiff', compress="lzw", height=Height, width=Width, count=1, dtype=rasterio.uint8, transform=aff, crs=crs) as dest:
+        for RowStart in range(0, Height, S2CL_BLOCK_ROWS):
+            RowEnd = min(RowStart + S2CL_BLOCK_ROWS, Height)
+            ReadStart = max(RowStart - Margin, 0)
+            ReadEnd = min(RowEnd + Margin, Height)
+            # Create an array for each band, then a list of arrays
+            ListofBandsArray = [np.array(Band.GetRasterBand(1).ReadAsArray(0, ReadStart, Width, ReadEnd - ReadStart)) for Band in ListofBands]
+            Bands = np.array([np.dstack(ListofBandsArray)])
+            # Cloud_Probs = Cloud_Detector.get_cloud_probability_maps(Bands)
+            Mask = Cloud_Detector.get_cloud_masks(Bands).astype(rasterio.uint8)
+            dest.write(Mask[:, RowStart-ReadStart:RowEnd-ReadStart, :], window=Window(0, RowStart, Width, RowEnd - RowStart))
+    ListofBands = None
     # Write output cloud probability (Comment if needed)
     #with rasterio.open(os.path.join(MaskingProductFolder, ac_product_name+'_CLOUD_Prob_10m.tif'), "w",  driver='GTiff',compress="lzw",height=Cloud_Probs.shape[1],width=Cloud_Probs.shape[2],count=1,dtype=Cloud_Probs.dtype,nodata=255, transform=aff, crs=crs) as dest:
     #    dest.write(Cloud_Probs)
@@ -505,6 +514,9 @@ def mask_stack(ac_product_folder, masked_product_folder, filter_ignore_value):
     # Init masked stack
     driver = gdal.GetDriverByName("GTiff")
     masked_stack_path = os.path.join(masked_product_folder, masked_product_name+"_masked_stack.tif")
+    # Remove an existing masked stack first: if it is a hard link to the AC stack, writing into it would overwrite the AC stack
+    if os.path.exists(masked_stack_path):
+        os.remove(masked_stack_path)
     masked_stack = driver.Create(masked_stack_path, stack_size[0], stack_size[1], band_number, gdal.GDT_Float32)
     masked_stack.SetProjection(stack.GetProjectionRef())
     masked_stack.SetGeoTransform(stack.GetGeoTransform())

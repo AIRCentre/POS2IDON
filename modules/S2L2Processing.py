@@ -33,7 +33,9 @@ def create_features_stack(input_folder, output_folder):
         virtual_stack_band.SetDescription(feature)
         i += 1
 
-    gdal.Translate(os.path.join(output_folder, os.path.basename(output_folder) +'_stack.tif'), virtual_stack, format='GTiff')
+    # Lossless DEFLATE compression. BIGTIFF needed for full tiles (stack > 4 GB)
+    gdal.Translate(os.path.join(output_folder, os.path.basename(output_folder) +'_stack.tif'), virtual_stack, format='GTiff',
+                   creationOptions=['COMPRESS=DEFLATE', 'PREDICTOR=3', 'TILED=YES', 'BIGTIFF=IF_SAFER'])
     virtual_stack = None
 
     # Delete isolated features, redundant information

@@ -16,8 +16,10 @@ import shutil
 from tqdm import tqdm
 import time
 from datetime import datetime, timedelta
-from cdsetool.query import query_features
+import requests
 from cdsetool.credentials import Credentials
+
+CDSE_STAC_SEARCH_URL = "https://stac.dataspace.copernicus.eu/v1/search"
 
 # Import FeLS (GitHub clone)
 Basepath = os.getcwd()
@@ -27,7 +29,7 @@ sys.path.append(os.path.join(Basepath,'configs/fetchLandsatSentinelFromGoogleClo
 import sentinel2 as sentinel2
 
  # Import ACOLITE (GitHub clone)
-sys.path.append(os.path.join(Basepath,'configs/acolite-main'))
+sys.path.append(os.path.join(Basepath,'configs/acolite-20260421'))
 import acolite as ac
 
 ########################################################################################################################################
@@ -95,11 +97,6 @@ def collect_s2l1c_cdse(roi, sensing_period, output_folder):
     # Logging list
     log_list = []
 
-    # Dictionary ROI to POLYGON
-    polygon_0 = str(tuple([item for sublist in roi["coordinates"][0] for item in sublist]))
-    polygon_1 = ",".join([f"{a}{b}" for a, b in zip(polygon_0.split(",")[0::2], polygon_0.split(",")[1::2])])
-    polygon = f"POLYGON({polygon_1})"
-
     # Sensing Period
     start_date_in = datetime.strptime(sensing_period[0], "%Y%m%d") 
     start_date = start_date_in.strftime("%Y-%m-%d")
@@ -110,15 +107,40 @@ def collect_s2l1c_cdse(roi, sensing_period, output_folder):
         end_date_in = datetime.strptime(sensing_period[1], "%Y%m%d") + timedelta(days=1)
         end_date = end_date_in.strftime("%Y-%m-%d")
 
-    # Search products
+    # Search products (CDSE STAC API, replaces the decommissioned OpenSearch "Sentinel2" collection)
     try:
-        features = query_features("Sentinel2", {"geometry": polygon, "startDate": start_date, "completionDate": end_date, "processingLevel": "S2MSI1C"})
+        body = {"collections": ["sentinel-2-l1c"], "intersects": roi,
+                "datetime": f"{start_date}T00:00:00Z/{end_date}T00:00:00Z", "limit": 100}
         products_list = []
-        for feature in features:
-            safe_name = feature.get("properties").get("title")
-            url = feature.get("properties").get("services").get("download").get("url")
-            url_safe = url + '/' + safe_name
-            products_list.append(url_safe)
+        response = requests.post(CDSE_STAC_SEARCH_URL, json=body, timeout=60)
+        while True:
+            response.raise_for_status()
+            page = response.json()
+            for feature in page.get("features", []):
+                safe_name = feature.get("id") + ".SAFE"
+                url = feature.get("assets").get("Product").get("href")
+                url_safe = url + '/' + safe_name
+                products_list.append(url_safe)
+            # Follow pagination
+            next_link = next((link for link in page.get("links", []) if link.get("rel") == "next"), None)
+            if next_link is None:
+                break
+            if next_link.get("method", "GET").upper() == "POST":
+                response = requests.post(next_link["href"], json=next_link.get("body", body), timeout=60)
+            else:
+                response = requests.get(next_link["href"], timeout=60)
+        # Exclude commissioning products (processing baseline N99xx, not calibrated for operational use)
+        # only when an operational product of the same platform, datatake and tile is also available
+        def acquisition_key(p):
+            parts = p.split('/')[-1].split('_')
+            return (parts[0], parts[2], parts[5])
+        def is_commissioning(p):
+            return p.split('/')[-1].split('_')[3].startswith("N99")
+        operational_keys = {acquisition_key(p) for p in products_list if not is_commissioning(p)}
+        commissioning_list = [p for p in products_list if is_commissioning(p) and acquisition_key(p) in operational_keys]
+        products_list = [p for p in products_list if p not in commissioning_list]
+        if len(commissioning_list) != 0:
+            log_list.append(str(len(commissioning_list)) + " commissioning products (baseline N99xx) excluded, operational version available:\n" + "\n".join(commissioning_list) + "\n")
         # Number of products available
         products_number = len(products_list)
         log_list.append(str(products_number) + " download links collected:\n" + "\n".join(products_list) + "\n")
@@ -222,13 +244,18 @@ def ACacolite(FilesToAC, OutputFolder, EDuser, EDpass, ROI):
     settings['dsf_residual_glint_correction'] = True
     settings['dsf_residual_glint_correction_method'] = 'default'
     # Calculate Top of Atmosphere, Surface Reflectance and Rayleigh reflectance (as in MARIDA values from L2W files)
-    RayBands = ['rhorc_442','rhorc_443','rhorc_492','rhorc_559','rhorc_560','rhorc_665','rhorc_704','rhorc_739','rhorc_740','rhorc_780','rhorc_783','rhorc_833','rhorc_864','rhorc_865','rhorc_1610','rhorc_1614','rhorc_2186','rhorc_2202']
-    SurBands = ['rhos_442','rhos_443','rhos_492','rhos_559','rhos_560','rhos_665','rhos_704','rhos_739','rhos_740','rhos_780','rhos_783','rhos_833','rhos_864','rhos_865','rhos_1610','rhos_1614','rhos_2186','rhos_2202']
-    settings['l2w_parameters'] = ['rhot_*'] + SurBands + RayBands
-    # Control default produced outputs in output folder (currently set to obtain only the .tif for each atm.corrected band + pngs)
-    # Produce RGB / L2W maps in output folder
-    settings['rgb_rhot'] = True
-    settings['rgb_rhos'] = True
+    # Rayleigh reflectance bands are used for the features stack (classification)
+    # Band wavelengths of S2A, S2B and S2C
+    RayBands = ['rhorc_442','rhorc_443','rhorc_444','rhorc_492','rhorc_489','rhorc_559','rhorc_560','rhorc_561','rhorc_665','rhorc_667','rhorc_704','rhorc_707','rhorc_739','rhorc_740','rhorc_741','rhorc_780','rhorc_783','rhorc_785','rhorc_833','rhorc_835','rhorc_864','rhorc_865','rhorc_866','rhorc_1610','rhorc_1614','rhorc_1612','rhorc_2186','rhorc_2202','rhorc_2191']
+    # Only Surface Reflectance bands used by the NDWI mask (B03 and B08)
+    SurBands = ['rhos_559','rhos_560','rhos_561','rhos_833','rhos_835']
+    # Only Top of Atmosphere bands used by the cloud mask (s2cloudless: B01,B02,B04,B05,B08,B8A,B09,B10,B11,B12)
+    TopBands = ['rhot_442','rhot_443','rhot_444','rhot_492','rhot_489','rhot_665','rhot_667','rhot_704','rhot_707','rhot_833','rhot_835','rhot_864','rhot_865','rhot_866','rhot_945','rhot_943','rhot_947','rhot_1373','rhot_1377','rhot_1372','rhot_1610','rhot_1614','rhot_1612','rhot_2186','rhot_2202','rhot_2191']
+    settings['l2w_parameters'] = TopBands + SurBands + RayBands
+    # Control default produced outputs in output folder (currently set to obtain only the .tif for each atm.corrected band)
+    # Produce RGB / L2W maps in output folder (not used, deleted by CleanAndOrganizeACOLITE)
+    settings['rgb_rhot'] = False
+    settings['rgb_rhos'] = False
     # Delete NetCDFs L1R, L2R, L2W .nc files in output folder
     settings['l1r_delete_netcdf'] = True
     settings['l2r_delete_netcdf'] = True
@@ -237,6 +264,8 @@ def ACacolite(FilesToAC, OutputFolder, EDuser, EDpass, ROI):
     settings['delete_acolite_run_text_files'] = True
     # GeoTIFF export options for L2W files
     settings['l2w_export_geotiff'] = True
+    # Lossless DEFLATE compression of exported GeoTIFFs (Cloud Optimized GeoTIFF)
+    settings['export_cloud_optimized_geotiff'] = True
  
     # Run Acolite
     ac.acolite.acolite_run(settings)
@@ -265,10 +294,8 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
     ListOfACOLITEfilePaths = glob.glob(os.path.join(AcoliteFolder, "*.tif"))
     #Through message if the ROI falls 100% on the no data side of the partial tile.
     if len(ListOfACOLITEfilePaths) == 0:
-        log_list.append("ROI falls 100% on the no data side of the partial tile. Product excluded")
-        #deleting unnecessary original products files from S2L1CproductsFolder 
-        ProductToDelete=os.path.join(S2L1CproductsFolder,SAFEFileName)
-        shutil.rmtree(ProductToDelete)
+        # Original product is kept, since this also happens when ACOLITE fails or is interrupted
+        log_list.append("No ACOLITE output (ROI falls 100% on the no data side of the partial tile, or ACOLITE failed). Product excluded, original product kept")
     else: 
         DictionaryOfGroups = {}  
         for ACOLITEfilePath in ListOfACOLITEfilePaths:  
@@ -284,14 +311,10 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
 
         #Avoid overwrite of results by ACOLITE for products with same SENSING TIME
         if os.path.exists(os.path.join(AcoliteFolder, ACOLITEProductFolderName)):
-            log_list.append("Product with same sensing time. Overwrite avoided. Product excluded")
+            log_list.append("Product with same sensing time. Overwrite avoided. Product excluded, original product kept")
             # deleting unnecessary acolite products from ACOLITEproductsFolder
-            for ACOLITEfiletoDelete in glob.glob(os.path.join(AcoliteFolder, "*.tif")): 
+            for ACOLITEfiletoDelete in glob.glob(os.path.join(AcoliteFolder, "*.tif")):
                 os.remove(ACOLITEfiletoDelete)
-            #deleting original products files from S2L1CproductsFolder
-            ProductToDelete=os.path.join(S2L1CproductsFolder,SAFEFileName)
-            shutil.rmtree(ProductToDelete)
-            pass
         else:
             os.mkdir(os.path.join(AcoliteFolder, ACOLITEProductFolderName))
             for ACOLITEfilePath in DictionaryOfGroupsCleaned[ACOLITEProductFolderName]:
@@ -299,20 +322,20 @@ def CleanAndOrganizeACOLITE(AcoliteFolder, S2L1CproductsFolder, SAFEFileName):
 
             # Rename bands files inside each folder
             ACOLITEProductFolder = os.path.join(AcoliteFolder, ACOLITEProductFolderName)  
-            # Associate bands wavelengths (keys) with IDs (values). Valid for S2A and S2B
-            BandsWlsToIds = {'rhorc_442':'B01','rhorc_443':'B01','rhos_442':'rhos_B01','rhos_443':'rhos_B01','rhot_442':'rhot_B01','rhot_443':'rhot_B01',
-                             'rhorc_492':'B02','rhos_492':'rhos_B02','rhot_492':'rhot_B02',
-                             'rhorc_559':'B03','rhorc_560':'B03','rhos_559':'rhos_B03','rhos_560':'rhos_B03','rhot_559':'rhot_B03','rhot_560':'rhot_B03',
-                             'rhorc_665':'B04','rhos_665':'rhos_B04','rhot_665':'rhot_B04',
-                             'rhorc_704':'B05','rhos_704':'rhos_B05','rhot_704':'rhot_B05',
-                             'rhorc_739':'B06','rhorc_740':'B06','rhos_739':'rhos_B06','rhos_740':'rhos_B06','rhot_739':'rhot_B06','rhot_740':'rhot_B06',
-                             'rhorc_780':'B07','rhorc_783':'B07','rhos_780':'rhos_B07','rhos_783':'rhos_B07','rhot_780':'rhot_B07','rhot_783':'rhot_B07',
-                             'rhorc_833':'B08','rhos_833':'rhos_B08','rhot_833':'rhot_B08',
-                             'rhorc_864':'B8A','rhorc_865':'B8A','rhos_864':'rhos_B8A','rhos_865':'rhos_B8A','rhot_864':'rhot_B8A','rhot_865':'rhot_B8A',
-                             'rhot_945':'rhot_B09','rhot_943':'rhot_B09',
-                             'rhot_1373':'rhot_B10','rhot_1377':'rhot_B10',
-                             'rhorc_1610':'B11','rhorc_1614':'B11','rhos_1610':'rhos_B11','rhos_1614':'rhos_B11','rhot_1610':'rhot_B11','rhot_1614':'rhot_B11',
-                             'rhorc_2186':'B12','rhorc_2202':'B12','rhos_2186':'rhos_B12','rhos_2202':'rhos_B12','rhot_2186':'rhot_B12','rhot_2202':'rhot_B12'}
+            # Associate bands wavelengths (keys) with IDs (values). Valid for S2A, S2B and S2C
+            BandsWlsToIds = {'rhorc_442':'B01','rhorc_443':'B01','rhorc_444':'B01','rhos_442':'rhos_B01','rhos_443':'rhos_B01','rhos_444':'rhos_B01','rhot_442':'rhot_B01','rhot_443':'rhot_B01','rhot_444':'rhot_B01',
+                             'rhorc_492':'B02','rhorc_489':'B02','rhos_492':'rhos_B02','rhos_489':'rhos_B02','rhot_492':'rhot_B02','rhot_489':'rhot_B02',
+                             'rhorc_559':'B03','rhorc_560':'B03','rhorc_561':'B03','rhos_559':'rhos_B03','rhos_560':'rhos_B03','rhos_561':'rhos_B03','rhot_559':'rhot_B03','rhot_560':'rhot_B03','rhot_561':'rhot_B03',
+                             'rhorc_665':'B04','rhorc_667':'B04','rhos_665':'rhos_B04','rhos_667':'rhos_B04','rhot_665':'rhot_B04','rhot_667':'rhot_B04',
+                             'rhorc_704':'B05','rhorc_707':'B05','rhos_704':'rhos_B05','rhos_707':'rhos_B05','rhot_704':'rhot_B05','rhot_707':'rhot_B05',
+                             'rhorc_739':'B06','rhorc_740':'B06','rhorc_741':'B06','rhos_739':'rhos_B06','rhos_740':'rhos_B06','rhos_741':'rhos_B06','rhot_739':'rhot_B06','rhot_740':'rhot_B06','rhot_741':'rhot_B06',
+                             'rhorc_780':'B07','rhorc_783':'B07','rhorc_785':'B07','rhos_780':'rhos_B07','rhos_783':'rhos_B07','rhos_785':'rhos_B07','rhot_780':'rhot_B07','rhot_783':'rhot_B07','rhot_785':'rhot_B07',
+                             'rhorc_833':'B08','rhorc_835':'B08','rhos_833':'rhos_B08','rhos_835':'rhos_B08','rhot_833':'rhot_B08','rhot_835':'rhot_B08',
+                             'rhorc_864':'B8A','rhorc_865':'B8A','rhorc_866':'B8A','rhos_864':'rhos_B8A','rhos_865':'rhos_B8A','rhos_866':'rhos_B8A','rhot_864':'rhot_B8A','rhot_865':'rhot_B8A','rhot_866':'rhot_B8A',
+                             'rhot_945':'rhot_B09','rhot_943':'rhot_B09','rhot_947':'rhot_B09',
+                             'rhot_1373':'rhot_B10','rhot_1377':'rhot_B10','rhot_1372':'rhot_B10',
+                             'rhorc_1610':'B11','rhorc_1614':'B11','rhorc_1612':'B11','rhos_1610':'rhos_B11','rhos_1614':'rhos_B11','rhos_1612':'rhos_B11','rhot_1610':'rhot_B11','rhot_1614':'rhot_B11','rhot_1612':'rhot_B11',
+                             'rhorc_2186':'B12','rhorc_2202':'B12','rhorc_2191':'B12','rhos_2186':'rhos_B12','rhos_2202':'rhos_B12','rhos_2191':'rhos_B12','rhot_2186':'rhot_B12','rhot_2202':'rhot_B12','rhot_2191':'rhot_B12'}
             
             # Change name of each ACOLITE band
             for ACOLITEfilePath in glob.glob(os.path.join(ACOLITEProductFolder, "*")):

@@ -85,130 +85,95 @@ def load_ml_model(model_folder, classification_options):
     return model, device, mean_bands, std_bands
 
 ########################################################################################################################
-def convert_stack_rfxgb(image, classification_options):
+# Number of image rows read and predicted at once by RF and XGB (limits memory use on full Sentinel-2 tiles)
+RFXGB_BLOCK_ROWS = 512
+
+########################################################################################################################
+def convert_stack_rfxgb(stack_raster, classification_options, row_offset, n_rows):
     """
-    This function only reads the features of interest from a stack TIF file.
-    Then it converts to dataframe (RF and XGB) or a short version of the stack raster (UNET).
-    ATTENTION: If you decide to include more features than the default 'all_features', you 
+    This function only reads the features of interest from a block of rows of a stack TIF file.
+    Then it converts to dataframe (RF and XGB).
+    ATTENTION: If you decide to include more features than the default 'all_features', you
                will need to change the dictionary.
     """
-    # Read stack
-    stack_raster = gdal.Open(image)
-
     # Select features of interest from the stack
-    all_features = {'B01':1, 'B02':2, 'B03':3, 'B04':4, 'B05':5, 'B06':6, 'B07':7, 'B08':8, 'B8A':9, 'B11':10, 
+    all_features = {'B01':1, 'B02':2, 'B03':3, 'B04':4, 'B05':5, 'B06':6, 'B07':7, 'B08':8, 'B8A':9, 'B11':10,
                     'B12':11, 'NDVI':12, 'FAI':13, 'FDI':14, 'SI':15, 'NDWI':16, 'NRD':17, 'NDMI':18, 'BSI':19}
     features_n = [all_features[i] for i in classification_options["features"]]
 
-        
-    # Create dataframe with only the data from the features of interest
-    # Init
-    init_stack_data = stack_raster.GetRasterBand(features_n[0]).ReadAsArray()
-    # Reshape as single column
-    stack_data = init_stack_data.reshape(-1,1)
-
-    for feature_n in features_n[1:]:
-        # Get data
-        feature_stack_data = stack_raster.GetRasterBand(feature_n).ReadAsArray()
-        feature_stack_reshaped = feature_stack_data.reshape(-1,1)
-        stack_data = np.concatenate([stack_data, feature_stack_reshaped], axis=1)
-
-    # Shape to use in reshape
-    stack_data_shape = init_stack_data.shape
+    # Create dataframe with only the data from the features of interest (one column per feature)
+    stack_data = np.stack([stack_raster.GetRasterBand(feature_n).ReadAsArray(0, row_offset, stack_raster.RasterXSize, n_rows).reshape(-1)
+                           for feature_n in features_n], axis=1)
     # Global dataframe to predict
     global_predict_df = pd.DataFrame(stack_data, columns=classification_options["features"])
 
     # Dataframe to predict, without NaNs
     no_nans_predict_df = global_predict_df.dropna(axis=0, how='any')
 
-    return stack_raster, stack_data_shape, global_predict_df, no_nans_predict_df
+    return global_predict_df, no_nans_predict_df
 
 ########################################################################################################################
-def save_maps(output_folder, image_name, img, predict_results_reshape, probability_results_reshape):
+def create_map_raster(output_folder, image_name, img, map_type, data_type):
     """
-    This function saves the scene classification and probability maps.
+    This function creates an empty scene classification ("sc") or probability ("proba") map with the georeference of the image.
     """
-    sc_output_folder = os.path.join(output_folder, "sc_maps")
-    # Initiate raster and save scene classification results to folder
     driver = gdal.GetDriverByName("GTiff")
-    sc_raster = driver.Create(os.path.join(sc_output_folder, image_name+"-scmap.tif"), img.RasterXSize, img.RasterYSize, 1, gdal.GDT_Byte)
-    sc_raster.SetProjection(img.GetProjectionRef())
-    sc_raster.SetGeoTransform(img.GetGeoTransform())
-    sc_raster_band = sc_raster.GetRasterBand(1)
-    sc_raster_band.WriteArray(predict_results_reshape)
-    sc_raster = None
-
-    # Classes probability
-    if probability_results_reshape is not None:
-        proba_output_folder = os.path.join(output_folder, "proba_maps")
-        # Initiate raster and save probabilities results to folder
-        driver = gdal.GetDriverByName("GTiff")
-        probability_raster = driver.Create(os.path.join(proba_output_folder, image_name+"-probamap.tif"), img.RasterXSize, img.RasterYSize, 1, gdal.GDT_Float32)
-        probability_raster.SetProjection(img.GetProjectionRef())
-        probability_raster.SetGeoTransform(img.GetGeoTransform())
-        probability_raster_band = probability_raster.GetRasterBand(1)
-        probability_raster_band.WriteArray(probability_results_reshape)
-        probability_raster = None
+    map_raster = driver.Create(os.path.join(output_folder, map_type+"_maps", image_name+"-"+map_type+"map.tif"), img.RasterXSize, img.RasterYSize, 1, data_type)
+    map_raster.SetProjection(img.GetProjectionRef())
+    map_raster.SetGeoTransform(img.GetGeoTransform())
+    return map_raster
 
 ########################################################################################################################
-def rfxgb_prediction(model, output_folder, image_name, img, img_shape, global_predict_df, no_nans_predict_df, ignore_log, classification_options):
+def rfxgb_prediction(model, output_folder, image, image_name, ignore_log, classification_options):
     """
-    This function uses RF or XGBoost to predict one or more images.
+    This function uses RF or XGBoost to predict one image, block of rows by block of rows, and saves the
+    scene classification and probability maps.
     """
 
     # Logging list
     log_list = []
 
-    # Structure of zero dataframe to store results
-    # Classification
-    predict_results_struct_df = pd.DataFrame(0, index=range(0, len(global_predict_df.index)), columns=['ClassNum'])
-    # Classes probability
+    # Read stack and init maps
+    img = gdal.Open(image)
+    sc_raster = create_map_raster(output_folder, image_name, img, "sc", gdal.GDT_Byte)
     if classification_options["classification_probabilities"] == True:
-        probability_results_struct_df = pd.DataFrame(0, index=range(0, len(global_predict_df.index)), columns=['Prob'])
+        probability_raster = create_map_raster(output_folder, image_name, img, "proba", gdal.GDT_Float32)
 
-    # If dataframe to predict without NaNs is empty, then the final classification is only 0 (the same for probabilities).
-    # A calculation between available data for prediction (without NaNs) and total data can be done here to only consider a percentage of more than 80% 
-    if len(no_nans_predict_df.index) == 0:
-        if ignore_log == False:
+    # Pixels with NaNs in any feature are 0 in the final classification (the same for probabilities).
+    no_nans_count = 0
+    for row_offset in range(0, img.RasterYSize, RFXGB_BLOCK_ROWS):
+        n_rows = min(RFXGB_BLOCK_ROWS, img.RasterYSize - row_offset)
+        global_predict_df, no_nans_predict_df = convert_stack_rfxgb(img, classification_options, row_offset, n_rows)
+        predict_results = np.zeros(len(global_predict_df.index))
+        probability_results = np.zeros(len(global_predict_df.index))
+
+        if len(no_nans_predict_df.index) != 0:
+            no_nans_count += len(no_nans_predict_df.index)
+            # Prediction
+            if classification_options["ml_algorithm"] == "xgb":
+                predict_results[no_nans_predict_df.index] = model.predict(no_nans_predict_df) + 1
+            else:
+                predict_results[no_nans_predict_df.index] = model.predict(no_nans_predict_df)
+
+            if classification_options["classification_probabilities"] == True:
+                # Probability of the predicted class (highest class probability) of each pixel
+                probability_results[no_nans_predict_df.index] = np.max(model.predict_proba(no_nans_predict_df), axis=1)
+
+        # Save block in maps
+        sc_raster.GetRasterBand(1).WriteArray(predict_results.reshape(n_rows, img.RasterXSize), 0, row_offset)
+        if classification_options["classification_probabilities"] == True:
+            probability_raster.GetRasterBand(1).WriteArray(probability_results.reshape(n_rows, img.RasterXSize), 0, row_offset)
+
+    sc_raster = None
+    probability_raster = None
+    img = None
+
+    # A calculation between available data for prediction (without NaNs) and total data can be done here to only consider a percentage of more than 80%
+    if ignore_log == False:
+        if no_nans_count == 0:
             log_list.append("Classification ignored, no dataframe without NaNs to predict")
-        predict_results_flat = np.array(predict_results_struct_df).flatten()
-        predict_results_reshape = predict_results_flat.reshape(img_shape)
-        # Classes probability
-        if classification_options["classification_probabilities"] == True:
-            probability_results_flat = np.array(probability_results_struct_df).flatten()
-            probability_results_reshape = probability_results_flat.reshape(img_shape)
         else:
-            probability_results_reshape = None
-
-    else:
-        if ignore_log == False:
-            log_list.append("Dataframe with no NaNs of shape " + str(no_nans_predict_df.shape))
-        # Prediction
-        if classification_options["ml_algorithm"] == "xgb":
-            predict_results_0 = model.predict(no_nans_predict_df)
-            predict_results = predict_results_0 + 1
-        else:
-            predict_results = model.predict(no_nans_predict_df)
-
-        if classification_options["classification_probabilities"] == True:
-            probability_results_all = model.predict_proba(no_nans_predict_df)
-            probability_results = np.max(probability_results_all)
-         
-        # Index results, construct final dataframe and reshape
-        predict_results_indexed = pd.DataFrame(predict_results, index=no_nans_predict_df.index, columns=['ClassNum'])
-        predict_results_df = predict_results_indexed.combine_first(predict_results_struct_df)
-        predict_results_flat = np.array(predict_results_df).flatten()
-        predict_results_reshape = predict_results_flat.reshape(img_shape)
-        if classification_options["classification_probabilities"] == True:
-            probability_results_indexed = pd.DataFrame(probability_results, index=no_nans_predict_df.index, columns=['Prob'])
-            probability_results_df = probability_results_indexed.combine_first(probability_results_struct_df)
-            probability_results_flat = np.array(probability_results_df).flatten()
-            probability_results_reshape = probability_results_flat.reshape(img_shape)
-        else:
-            probability_results_reshape = None
-
-    # Save maps
-    save_maps(output_folder, image_name, img, predict_results_reshape, probability_results_reshape)
+            log_list.append("Dataframe with no NaNs of shape " + str((no_nans_count, len(classification_options["features"]))))
 
     return log_list
         
@@ -385,10 +350,8 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
         # Cycle each TIF
         for image in tifs_list:
             image_name = os.path.basename(image)[:-4]+"_rf"
-            # Convert full stack to desired DF
-            img, img_data_shape, global_predict_df, no_nans_predict_df = convert_stack_rfxgb(image, classification_options)
-            # Prepare data even more and prediction
-            log_list0 = rfxgb_prediction(model, output_folder, image_name, img, img_data_shape, global_predict_df, no_nans_predict_df, ignore_log, classification_options)
+            # Prediction by blocks of rows
+            log_list0 = rfxgb_prediction(model, output_folder, image, image_name, ignore_log, classification_options)
             log_list = log_list + log_list0
         
     # XGBoost
@@ -397,10 +360,8 @@ def create_sc_proba_maps(input_folder, output_folder, classification_options):
         # Cycle each TIF
         for image in tifs_list:
             image_name = os.path.basename(image)[:-4]+"_xgb"
-            # Convert full stack to desired DF
-            img, img_data_shape, global_predict_df, no_nans_predict_df = convert_stack_rfxgb(image, classification_options)
-            # Prepare data even more and prediction
-            log_list0 = rfxgb_prediction(model, output_folder, image_name, img, img_data_shape, global_predict_df, no_nans_predict_df, ignore_log, classification_options)
+            # Prediction by blocks of rows
+            log_list0 = rfxgb_prediction(model, output_folder, image, image_name, ignore_log, classification_options)
             log_list = log_list + log_list0
 
     # Unet

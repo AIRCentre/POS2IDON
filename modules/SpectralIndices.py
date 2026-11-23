@@ -55,18 +55,24 @@ def CalculateFAIorFDItif(B4B6B8B11Paths, S2platform, PathAndTifName, Index):
     saves to a folder.
     Input: B4B6B8B11Paths - List with band paths [B4path, B6path, B8path, B11path] to use
                             in the calculation of FAI or FDI.
-           S2platform - String with S2A or S2B platforms.                 
+           S2platform - String with S2A, S2B or S2C platforms.
            PathAndTifName - Path where the tif file will be saved (includes name of file).
            Index - String with FAI or FDI.
     Output: FAI or FDI tif file.
     """
 
-    # Select central wavelength according to Sentinel-2 platform (S2-A or -B)
+    # Select central wavelength according to Sentinel-2 platform (S2-A, -B or -C)
+    # Spectral response weighted central wavelengths (ESA Sentinel-2 Spectral Response Functions 2024 - 4.0)
     if S2platform == "S2A":
         wlB04 = 664.6
         wlB06 = 740.5
         wlB08 = 832.8
         wlB11 = 1613.7
+    elif S2platform == "S2C":
+        wlB04 = 666.5
+        wlB06 = 741.1
+        wlB08 = 834.6
+        wlB11 = 1612.0
     else:
         wlB04 = 664.9
         wlB06 = 739.1

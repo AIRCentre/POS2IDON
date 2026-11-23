@@ -49,13 +49,11 @@ def split_image_with_overlap(folder_path, patch_size, overlap=0):
     if not os.path.exists(patches_path):
         os.mkdir(patches_path)
 
-    # Open stacked raster
+    # Open stacked raster (patches are read one by one, to avoid loading full image in memory)
     image_path = os.path.join(folder_path, os.path.basename(folder_path) + "_masked_stack.tif")
-    image_open = gdal.Open(image_path,1)
-    image = image_open.ReadAsArray()
-    img_shape = image.shape
-    img_height = img_shape[1]
-    img_width = img_shape[2]
+    image_open = gdal.Open(image_path)
+    img_height = image_open.RasterYSize
+    img_width = image_open.RasterXSize
     #print("Image: " + str(img_width) + "x" + str(img_height))
     
     patch_width = patch_size[0]
@@ -70,7 +68,9 @@ def split_image_with_overlap(folder_path, patch_size, overlap=0):
     for y in y_points:
         column_count = 0
         for x in x_points:
-            patch = image[:, y:y+patch_height, x:x+patch_width] 
+            patch = image_open.ReadAsArray(x, y, min(patch_width, img_width-x), min(patch_height, img_height-y))
+            if patch.ndim == 2:
+                patch = patch[np.newaxis]
             patch_nbands = patch.shape[0]
             #print("Processed patch: " + str(patch_nbands) + "," + str(patch.shape[2]) + "x" + str(patch.shape[1]))
             
