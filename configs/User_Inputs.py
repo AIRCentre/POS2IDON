@@ -148,6 +148,8 @@ classification_options = {"split_and_mosaic": False,
                           "features_mean": [0.05197577, 0.04783991, 0.04056812, 0.03163572, 0.02972606, 0.03457443, 0.03875053, 0.03436435, 0.0392113,  0.02358126, 0.01588816],
                           # Only used for Unet models. Standard Deviation value for each feature.
                           "features_std": [0.04725893, 0.04743808, 0.04699043, 0.04967381, 0.04946782, 0.06458357, 0.07594915, 0.07120246, 0.08251058, 0.05111466, 0.03524419]
+                          # Optional: "export_feather": True also saves the classification map as a feather table (X, Y, Value),
+                          # about 2-3 GB per full tile. Off if not given.
                           }
 
 
