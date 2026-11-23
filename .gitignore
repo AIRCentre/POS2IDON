@@ -1,5 +1,5 @@
 # Ignore some files inside Configs, because are too heavy or confidential.
-configs/acolite-main/*
+configs/acolite-*/
 configs/fetchLandsatSentinelFromGoogleCloud-master/*
 configs/MLmodels/*
 !configs/MLmodels/RF_Model_Example_MARIDA/RF_Model_Example_MARIDA.txt
@@ -13,14 +13,14 @@ configs/*.sqlite
 1_Atmospheric_Corrected_Products/*
 2_Masked_Products/*
 2-1_ESA_Worldcover/*
-3_Classification_Results/*
+3_Classification_Results*/
 4_logfile.log
 
 # Ignore other files and files
 modules/Post_Processing.py
 visualization_cube.py
 climatology_cube.py
-4_Post_Processing_Results/*
+4_Post_Processing_Results*/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,python,dotenv
