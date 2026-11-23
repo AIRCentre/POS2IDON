@@ -185,10 +185,10 @@ if pre_start_flag == 1:
                 try:        
                     # -> Download
                     if download == True:
-                        # Delete old product that might be corrupted
+                        # Skip product already downloaded (allows resuming an interrupted download)
                         if os.path.exists(safe_file_path):
-                            shutil.rmtree(safe_file_path)  
-                        if service == "GC":
+                            main_logger.info("Product already downloaded. Download skipped")
+                        elif service == "GC":
                             main_logger.info("Downloading " + url.split('/')[-1])
                             DownloadTile_from_URL_GC(url, s2l1c_products_folder)
                             # Check if OPER file was excluded
@@ -312,7 +312,9 @@ if pre_start_flag == 1:
                                 main_logger.info("NDWI-based or Band8-based masking ignored")
                            
                             # -> Cloud Mask
-                            if masking_options["cloud_mask"] == True:
+                            # Local flag: a failure on one product must not switch off the cloud mask for all following products
+                            cloud_mask_product = masking_options["cloud_mask"]
+                            if cloud_mask_product == True:
                                 main_logger.info("Creating Cloud mask")
                                 try:
                                     CloudMasking_S2CloudLess_ROI_10m(ac_product, masks_folder, masking_options["cloud_mask_threshold"], masking_options["cloud_mask_average"], masking_options["cloud_mask_dilation"])
@@ -322,13 +324,13 @@ if pre_start_flag == 1:
                                         excluded_products_corrupted.append(safe_file_name)
                                     else:
                                         main_logger.info(str(e))
-                                    masking_options["cloud_mask"] = False
+                                    cloud_mask_product = False
                             else:
                                 main_logger.info("Cloud masking ignored")
- 
+
                             # Create final mask
                             main_logger.info("Creating Final mask")
-                            user_inputs_masks = [masking_options["features_mask"], masking_options["cloud_mask"]]
+                            user_inputs_masks = [masking_options["features_mask"], cloud_mask_product]
                             log_list_6, final_mask_path = CreateFinalMask(masked_product, user_inputs_masks)
                             for log in log_list_6: main_logger.info(log)
 
@@ -340,7 +342,8 @@ if pre_start_flag == 1:
                             else:
                                 # For UNET apply final mask later
                                 main_logger.info("For Unet masking will be applied later")
-                                shutil.copy(os.path.join(ac_product, ac_product_name+"_stack.tif"), os.path.join(masked_product, ac_product_name+"_masked_stack.tif"))
+                                # Hard link to the AC stack (same file, no extra disk space), copy if a link is not possible
+                                link_or_copy(os.path.join(ac_product, ac_product_name+"_stack.tif"), os.path.join(masked_product, ac_product_name+"_masked_stack.tif"))
 
                             # Copy info text file
                             info_file_in = os.path.join(ac_product, "Info.txt")
@@ -418,9 +421,12 @@ if pre_start_flag == 1:
                             info_file_out = os.path.join(classification_product, "Info.txt")
                             shutil.copy(info_file_in, info_file_out)
 
-                            # Convert final classification map to feather
-                            raster_to_feather(os.path.join(classification_product, "sc_maps", masked_file_name + "_" + classification_options["ml_algorithm"] + "-scmap.tif"))
-                            main_logger.info("SC map converted to feather")
+                            # Convert final classification map to feather (X, Y, Value table).
+                            # Off by default: about 2-3 GB per full tile (plus a ~4 GB temporary .xyz).
+                            # Add "export_feather": True to classification_options to switch it on.
+                            if classification_options.get("export_feather", False) == True:
+                                raster_to_feather(os.path.join(classification_product, "sc_maps", masked_file_name + "_" + classification_options["ml_algorithm"] + "-scmap.tif"))
+                                main_logger.info("SC map converted to feather")
                         else:
                             main_logger.info("There is no masked product to apply classification") 
                     else:
@@ -435,10 +441,16 @@ if pre_start_flag == 1:
                         delete_folder(safe_file_path)
                         main_logger.info("Original products deleted")
 
-                    # -> Delete some intermediate 
+                    # -> Delete some intermediate
+                    # Only when masking of this product is complete (final mask exists): the deleted
+                    # Surface_Reflectance_Bands and Top_Atmosphere_Bands are needed to redo the masking
                     if delete["some_intermediate"] == True:
-                        delete_intermediate(ac_product, masked_product, classification_product, mode="some")
-                        main_logger.info("Some intermediate folders and files deleted")
+                        final_mask_file = os.path.join(masked_product, "Masks", product_short_name+"_FINAL_Mask.tif")
+                        if (product_short_name != "NONE") and os.path.exists(final_mask_file):
+                            delete_intermediate(ac_product, masked_product, classification_product, mode="some")
+                            main_logger.info("Some intermediate folders and files deleted")
+                        else:
+                            main_logger.info("Intermediate files kept, masking of this product is not complete")
 
                     # -> Delete all intermediate
                     if delete["all_intermediate"] == True:

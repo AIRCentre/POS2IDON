@@ -96,8 +96,8 @@ We recommend a machine with a dedicated GPU.
     - [FeLS - Fetch Landsat & Sentinel Data from Google Cloud (private)](https://github.com/EmanuelCastanho/fetchLandsatSentinelFromGoogleCloud.git) repository in the folder :\
     `/configs/fetchLandsatSentinelFromGoogleCloud-master`
 
-    - [ACOLITE - generic atmospheric correction module (20221114.0)](https://github.com/acolite/acolite.git/) repository in the folder :\
-    `/configs/acolite-main`
+    - [ACOLITE - generic atmospheric correction module (20260421.0, supports Sentinel-2A, 2B and 2C)](https://github.com/acolite/acolite.git/) repository in the folder :\
+    `/configs/acolite-20260421`
    
 If the cloning does not start automatically or if the repositories were corrupted during cloning, you can manually download them using the previous links.
 
@@ -113,6 +113,15 @@ To test the classification workflow we provide a random forest model based on [M
 
 ![](Example-img.png)
 Visualization with [QGIS](https://qgis.org/en/site/), color palette provided inside `configs/QGIScolorpalettes`.
+
+## Updates
+
+- Sentinel-2C support: ACOLITE 20260421.0, S2C band wavelengths in the atmospheric correction outputs and S2C central wavelengths in the FDI/FAI calculation.
+- Copernicus Data Space Ecosystem search with the STAC API (`sentinel-2-l1c` collection). Commissioning products (processing baseline N99xx) are skipped when the operational product of the same acquisition is available.
+- Products already downloaded are not downloaded again (an interrupted run can be resumed). Original products are no longer deleted when ACOLITE fails or gives no output.
+- Lower memory use on full Sentinel-2 tiles: cloud mask, Random Forest/XGBoost classification and Unet patches are processed by blocks. Feature stacks are saved with lossless compression.
+- A cloud mask failure on one product no longer switches off the cloud mask for the following products.
+- Feather export of the classification map is optional (`"export_feather": True` in `classification_options`), off by default.
 
 ## Citation
 
